@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { Panel, PanelHeader } from '@/components/ui/Panel'
 import { IconDownload, IconUpload } from '@/components/ui/icons'
+import { resetDocument } from '@/lib/api'
 import { validateDocumentShape } from '@/lib/validateDocument'
 import { useDataStore } from '@/store/data'
 
@@ -59,9 +60,12 @@ export function DataTab() {
   }
 
   const doReset = async () => {
-    const response = await fetch('/api/reset', { method: 'POST' })
-    if (response.ok) window.location.reload()
-    setConfirmReset(false)
+    try {
+      await resetDocument()
+      window.location.reload()
+    } finally {
+      setConfirmReset(false)
+    }
   }
 
   return (

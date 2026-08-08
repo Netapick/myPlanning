@@ -1,0 +1,27 @@
+[package]
+name = "myplanning"
+version = "1.0.0"
+description = "Application locale de gestion de planning"
+edition = "2021"
+
+[lib]
+# Nom de crate distinct du binaire — convention Tauri 2, nécessaire pour que
+# `tauri dev` puisse recharger la lib sans reconstruire tout le binaire.
+name = "myplanning_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+
+[profile.release]
+# Un outil perso, pas un produit distribué à grande échelle : on privilégie
+# un temps de build raisonnable à un binaire minimal au octet près.
+panic = "abort"
+codegen-units = 1
+lto = true

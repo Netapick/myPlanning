@@ -13,9 +13,18 @@ dist-ssr
 # Données de planning — c'est TON fichier de travail, propre à ta machine.
 # Il n'a rien à faire dans le dépôt : le dépôt porte le code, pas les plannings.
 # `data/planning.example.json` (commité) sert de graine au premier lancement.
+# En mode desktop (Tauri), le fichier réel vit hors du dépôt, dans le dossier
+# de données de l'app (%APPDATA%\com.myplanning.app\) — rien à ignorer ici
+# pour ce mode-là.
 /data/planning.json
 /data/planning.backup.json
 /data/*.tmp
+
+# Tauri — artefacts de build Rust (lourds, régénérés à chaque `tauri build`)
+# et bindings mobiles générés (pas concerné : ni iOS ni Android pour l'instant,
+# mais `tauri android/ios init` créerait ces dossiers).
+/src-tauri/target
+/src-tauri/gen
 
 # Editor directories and files
 .vscode/*
