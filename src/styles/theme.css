@@ -1,0 +1,316 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* ---------------------------------------------------------------------------
+   Design system « Proton Schedule ».
+
+   Corporate / minimaliste, pensé pour de la donnée dense : le plan de travail
+   est un gris clair, les conteneurs de données sont des modules blancs nets.
+   La hiérarchie passe par des aplats et des filets de 1px, pas par des ombres
+   marquées.
+--------------------------------------------------------------------------- */
+
+/* Variante sombre pilotée par data-theme sur <html>, posé par le script inline
+   d'index.html AVANT le premier rendu. On n'utilise pas `prefers-color-scheme`
+   dans les utilitaires : le réglage manuel doit pouvoir gagner contre le
+   thème du système. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@layer base {
+  :root,
+  [data-theme='light'] {
+    color-scheme: light;
+
+    /* Surfaces étagées — l'architecture « surface-sur-base » du design system */
+    --surface-0: #f4f5f7; /* plan de travail */
+    --surface-1: #ffffff; /* module de données (tuile, grille, tableau) */
+    --surface-2: #f3f4f6; /* élément imbriqué, en-tête de tableau */
+    --surface-3: #e7e8ea; /* survol / état pressé */
+    --surface-header: #ebecf0; /* en-têtes de tableau, imposé par le design system */
+
+    --border-hairline: #dfe1e6;
+    --border-strong: #c3c6d6;
+
+    --text-primary: #191c1e;
+    --text-secondary: #434654;
+    --text-tertiary: #737685;
+    --text-inverse: #ffffff;
+
+    /* Bleu professionnel #0052CC — action principale, états actifs, sélection */
+    --accent: #0052cc;
+    --accent-strong: #003d9b; /* survol des boutons pleins, texte de lien insistant */
+    --accent-soft: color-mix(in srgb, #0052cc 10%, transparent);
+    --accent-contrast: #ffffff; /* 6.82:1 sur l'accent */
+
+    /* Statut — palette fixe validée (skill dataviz), jamais retouchée à l'œil.
+       Les variantes `-text` sont les seules employées pour du texte : les
+       teintes brutes descendent sous 4.5:1 sur fond clair. */
+    --good: #0ca30c;
+    --good-text: #006300;
+    --good-soft: color-mix(in srgb, #0ca30c 12%, transparent);
+    --warning: #fab219;
+    --warning-text: #7a4f00;
+    --warning-soft: color-mix(in srgb, #fab219 16%, transparent);
+    --serious: #ec835a;
+    --serious-text: #9a3b12;
+    --serious-soft: color-mix(in srgb, #ec835a 14%, transparent);
+    --critical: #d03b3b;
+    --critical-text: #d03b3b;
+    --critical-soft: color-mix(in srgb, #d03b3b 10%, transparent);
+
+    /* Palette catégorielle des tranches horaires — 8 teintes, ordre fixe,
+       jamais recyclé au-delà (voir lib/palette.ts). Valeurs telles quelles
+       depuis la skill dataviz, revalidées contre la surface blanche des
+       cartes : bande de clarté, plancher de chroma, séparation daltonisme
+       (pire paire ΔE 9.1) et plancher vision normale (19.6) passent.
+       Aqua, jaune et magenta restent sous 3:1 sur blanc : c'est admis ici
+       car la couleur n'est jamais seule porteuse de sens — chaque créneau
+       affiche son nom et ses horaires en texte, la couleur n'étant qu'un
+       liseré de rappel. C'est la « règle de relief » exigée par la skill. */
+    --cat-1: #2a78d6;
+    --cat-2: #eb6834;
+    --cat-3: #1baf7a;
+    --cat-4: #eda100;
+    --cat-5: #e87ba4;
+    --cat-6: #008300;
+    --cat-7: #4a3aa7;
+    --cat-8: #e34948;
+
+    /* Graphique — série unique (heures par jour), donc une seule teinte */
+    --chart-bar: #2a78d6;
+    --chart-bar-muted: #b7d3f6;
+    --chart-grid: #e1e0d9;
+
+    /* En clair l'élévation se lit par l'ombre ; en sombre par la surface.
+       Le design system impose des ombres discrètes : 4px de flou, 5%. */
+    --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 8px -4px rgb(0 0 0 / 0.1);
+    --shadow-overlay: 0 4px 12px rgb(0 0 0 / 0.12), 0 16px 32px -16px rgb(0 0 0 / 0.2);
+  }
+
+  [data-theme='dark'] {
+    color-scheme: dark;
+
+    --surface-0: #14161a;
+    --surface-1: #1c1f24;
+    --surface-2: #232730;
+    --surface-3: #2b303a;
+    --surface-header: #232730;
+
+    --border-hairline: #2e323b;
+    --border-strong: #3d424e;
+
+    --text-primary: #e6e8ec;
+    --text-secondary: #a6abb8;
+    --text-tertiary: #868c9b; /* 4.91:1 — le #737685 du thème clair y tombe à 3.3 */
+    --text-inverse: #14161a;
+
+    /* #0052CC tombe à 2.1:1 sur la surface sombre : éclairci jusqu'à 7.91:1,
+       même famille de teinte. Le texte posé dessus redevient sombre. */
+    --accent: #8ab4ff;
+    --accent-strong: #a9c8ff;
+    --accent-soft: color-mix(in srgb, #8ab4ff 16%, transparent);
+    --accent-contrast: #0b1220;
+
+    /* Mêmes quatre teintes de statut : toutes dégagent 4.5:1 sur fond sombre,
+       sauf `critical` (#d03b3b n'y fait que 3.62) qui est éclairci. */
+    --good: #0ca30c;
+    --good-text: #0ca30c;
+    --good-soft: color-mix(in srgb, #0ca30c 18%, transparent);
+    --warning: #fab219;
+    --warning-text: #fab219;
+    --warning-soft: color-mix(in srgb, #fab219 18%, transparent);
+    --serious: #ec835a;
+    --serious-text: #ec835a;
+    --serious-soft: color-mix(in srgb, #ec835a 18%, transparent);
+    --critical: #ea7373;
+    --critical-text: #ea7373;
+    --critical-soft: color-mix(in srgb, #ea7373 18%, transparent);
+
+    /* Mêmes huit teintes, redosées pour la surface sombre — pas une autre
+       palette. Validées comme un ensemble contre --surface-1 : tous les
+       contrôles passent, contraste inclus (≥ 3:1 cette fois). */
+    --cat-1: #3987e5;
+    --cat-2: #d95926;
+    --cat-3: #199e70;
+    --cat-4: #c98500;
+    --cat-5: #d55181;
+    --cat-6: #008300;
+    --cat-7: #9085e9;
+    --cat-8: #e66767;
+
+    --chart-bar: #3987e5;
+    --chart-bar-muted: #1c5cab;
+    --chart-grid: #2c2c2a;
+
+    --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-overlay: 0 4px 16px -4px rgb(0 0 0 / 0.55);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Exposition en tokens Tailwind.
+   `inline` fait pointer les utilitaires vers var(--x) au lieu d'en copier la
+   valeur : c'est ce qui permet à bg-surface-1 de suivre le changement de
+   thème sans recompilation.
+--------------------------------------------------------------------------- */
+@theme inline {
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-header: var(--surface-header);
+
+  --color-hairline: var(--border-hairline);
+  --color-strong: var(--border-strong);
+
+  --color-ink: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-faint: var(--text-tertiary);
+  --color-inverse: var(--text-inverse);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+
+  --color-good: var(--good);
+  --color-good-text: var(--good-text);
+  --color-good-soft: var(--good-soft);
+  --color-warning: var(--warning);
+  --color-warning-text: var(--warning-text);
+  --color-warning-soft: var(--warning-soft);
+  --color-serious: var(--serious);
+  --color-serious-text: var(--serious-text);
+  --color-serious-soft: var(--serious-soft);
+  --color-critical: var(--critical);
+  --color-critical-text: var(--critical-text);
+  --color-critical-soft: var(--critical-soft);
+
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
+  --color-cat-7: var(--cat-7);
+  --color-cat-8: var(--cat-8);
+
+  --color-chart-bar: var(--chart-bar);
+  --color-chart-bar-muted: var(--chart-bar-muted);
+  --color-chart-grid: var(--chart-grid);
+
+  --shadow-raised: var(--shadow-raised);
+  --shadow-overlay: var(--shadow-overlay);
+
+  /* Formes — « soft et professionnel » : 4px sur les contrôles, 8px sur les
+     grands conteneurs. Le rond est réservé aux avatars. */
+  --radius-control: 0.25rem;
+  --radius-panel: 0.5rem;
+
+  /* Rythme — grille de base 4px */
+  --spacing-sidebar: 260px;
+  --spacing-gutter: 16px;
+  --spacing-canvas: 24px;
+  --spacing-slot: 48px;
+
+  --font-sans:
+    'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Échelle typographique du design system */
+  --text-display: 36px;
+  --text-display--line-height: 44px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 700;
+
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 32px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-headline-md: 20px;
+  --text-headline-md--line-height: 28px;
+  --text-headline-md--font-weight: 600;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-label--letter-spacing: 0.05em;
+  --text-label--font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--surface-0);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Anneau de focus cohérent, visible seulement au clavier */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Utilitaires maison
+--------------------------------------------------------------------------- */
+
+/* Chiffres à largeur fixe. Le design system l'impose sur les horaires : sans
+   ça, les colonnes « 08:00 - 16:00 » de la grille tressautent d'une ligne à
+   l'autre et l'œil ne peut plus les balayer verticalement. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Halo de focus des champs : bordure accent + lueur 2px à 20%, tel que
+   spécifié par le design system. */
+@utility field-focus {
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+}
+
+/* Barre de défilement fine pour les panneaux internes — la barre système par
+   défaut est trop épaisse pour une liste de quelques centaines de pixels. */
+@utility scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--border-strong);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}

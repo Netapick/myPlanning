@@ -1,0 +1,29 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Données de planning — c'est TON fichier de travail, propre à ta machine.
+# Il n'a rien à faire dans le dépôt : le dépôt porte le code, pas les plannings.
+# `data/planning.example.json` (commité) sert de graine au premier lancement.
+/data/planning.json
+/data/planning.backup.json
+/data/*.tmp
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
