@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconBell, IconCheck, IconClose } from '@/components/ui/icons'
-import { IconButton } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
 import { useUiStore } from '@/store/ui'
 import type { Severity } from './rules'
-import { useDismissNotification, useNotifications } from './useNotifications'
+import { useDismissAllNotifications, useDismissNotification, useNotifications } from './useNotifications'
 
 const SEVERITY_DOT: Record<Severity, string> = {
   critical: 'bg-critical',
@@ -23,6 +23,7 @@ const SEVERITY_DOT: Record<Severity, string> = {
 export function NotificationsBell() {
   const notifications = useNotifications()
   const dismiss = useDismissNotification()
+  const dismissAll = useDismissAllNotifications()
   const navigate = useNavigate()
   const open = useUiStore((state) => state.notificationsOpen)
   const setOpen = useUiStore((state) => state.setNotificationsOpen)
@@ -68,9 +69,20 @@ export function NotificationsBell() {
             <h2 className="text-label tracking-wide text-muted uppercase">
               Alertes {count > 0 ? `(${count})` : ''}
             </h2>
-            <IconButton label="Fermer" onClick={() => setOpen(false)}>
-              <IconClose size={16} />
-            </IconButton>
+            <div className="flex items-center gap-1">
+              {count > 0 ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => dismissAll(notifications.map((notification) => notification.key))}
+                >
+                  Tout effacer
+                </Button>
+              ) : null}
+              <IconButton label="Fermer" onClick={() => setOpen(false)}>
+                <IconClose size={16} />
+              </IconButton>
+            </div>
           </header>
 
           {count === 0 ? (

@@ -25,9 +25,8 @@ import {
 } from '@/lib/week'
 import { useDataStore } from '@/store/data'
 import { EventBanner } from './EventBanner'
-import { EventForm } from '../personnel/EventForm'
+import { PlanningEntryModal } from './PlanningEntryModal'
 import { ShiftCard } from './ShiftCard'
-import { ShiftForm } from './ShiftForm'
 
 interface DraftTarget {
   employeeId: string
@@ -62,11 +61,10 @@ export function PlanningScreen() {
 
   const [reference, setReference] = useState(() => new Date())
   const [teamFilter, setTeamFilter] = useState<string>('all')
-  const [editing, setEditing] = useState<Shift | null>(null)
-  const [draft, setDraft] = useState<DraftTarget | null>(null)
-  const [formOpen, setFormOpen] = useState(false)
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
-  const [eventFormOpen, setEventFormOpen] = useState(false)
+  const [entryOpen, setEntryOpen] = useState(false)
+  const [entryTarget, setEntryTarget] = useState<DraftTarget | null>(null)
+  const [entryShift, setEntryShift] = useState<Shift | null>(null)
+  const [entryEvent, setEntryEvent] = useState<Event | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DraftTarget | null>(null)
 
@@ -123,19 +121,23 @@ export function PlanningScreen() {
     return totals
   }, [shifts, isoDays])
 
-  const openCreate = (employeeId: string, date: string) => {
-    setEditing(null)
-    setDraft({ employeeId, date })
-    setFormOpen(true)
+  const openCell = (employeeId: string, date: string) => {
+    setEntryTarget({ employeeId, date })
+    setEntryShift(null)
+    setEntryEvent(null)
+    setEntryOpen(true)
   }
-  const openEdit = (shift: Shift) => {
-    setEditing(shift)
-    setDraft(null)
-    setFormOpen(true)
+  const openShift = (shift: Shift) => {
+    setEntryTarget({ employeeId: shift.employeeId, date: shift.date })
+    setEntryShift(shift)
+    setEntryEvent(null)
+    setEntryOpen(true)
   }
-  const openEventEdit = (event: Event) => {
-    setEditingEvent(event)
-    setEventFormOpen(true)
+  const openEvent = (event: Event, date: string) => {
+    setEntryTarget({ employeeId: event.employeeId, date })
+    setEntryShift(null)
+    setEntryEvent(event)
+    setEntryOpen(true)
   }
   const goToProfile = (employeeId: string) => {
     navigate(`/personnel?employee=${employeeId}`)
@@ -200,7 +202,7 @@ export function PlanningScreen() {
           <EmptyState
             icon={<IconCalendar size={28} />}
             title="Aucune personne à planifier"
-            description="Ajoute des membres dans Personnel, ou change le filtre d'équipe."
+            description="Ajoute des membres dans Personnels, ou change le filtre d'équipe."
           />
         </Panel>
       ) : (
@@ -231,9 +233,9 @@ export function PlanningScreen() {
                 dragging={dragging}
                 dropTarget={dropTarget}
                 onNameClick={goToProfile}
-                onCellClick={openCreate}
-                onShiftClick={openEdit}
-                onEventClick={openEventEdit}
+                onCellClick={openCell}
+                onShiftClick={openShift}
+                onEventClick={openEvent}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onDragOver={setDropTarget}
@@ -244,24 +246,19 @@ export function PlanningScreen() {
         </Panel>
       )}
 
-      <ShiftForm
-        open={formOpen}
-        shift={editing}
-        draft={draft}
+      <PlanningEntryModal
+        open={entryOpen}
+        employeeId={entryTarget?.employeeId ?? ''}
+        date={entryTarget?.date ?? ''}
         employees={visibleEmployees}
         templates={templates.filter((template) => !template.archived)}
-        onClose={() => setFormOpen(false)}
-        onSave={upsertShift}
-        onDelete={editing ? () => removeShift(editing.id) : undefined}
-      />
-
-      <EventForm
-        open={eventFormOpen}
-        event={editingEvent}
-        employees={visibleEmployees}
-        onClose={() => setEventFormOpen(false)}
-        onSave={upsertEvent}
-        onDelete={editingEvent ? () => removeEvent(editingEvent.id) : undefined}
+        shift={entryShift}
+        event={entryEvent}
+        onClose={() => setEntryOpen(false)}
+        onSaveShift={upsertShift}
+        onDeleteShift={entryShift ? () => removeShift(entryShift.id) : undefined}
+        onSaveEvent={upsertEvent}
+        onDeleteEvent={entryEvent ? () => removeEvent(entryEvent.id) : undefined}
       />
     </div>
   )
@@ -302,7 +299,7 @@ function EmployeeRow({
   onNameClick: (employeeId: string) => void
   onCellClick: (employeeId: string, date: string) => void
   onShiftClick: (shift: Shift) => void
-  onEventClick: (event: Event) => void
+  onEventClick: (event: Event, date: string) => void
   onDragStart: (event: DragEvent<HTMLButtonElement>, shift: Shift) => void
   onDragEnd: () => void
   onDragOver: (target: DraftTarget | null) => void
@@ -336,7 +333,7 @@ function EmployeeRow({
             key={date}
             role="button"
             tabIndex={0}
-            aria-label={`Ajouter un créneau — ${day ? longDateLabel(day) : date}`}
+            aria-label={`Ajouter un créneau ou un événement — ${day ? longDateLabel(day) : date}`}
             onClick={() => onCellClick(employee.id, date)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' || event.key === ' ') {
@@ -359,7 +356,7 @@ function EmployeeRow({
                 event={dayEvent}
                 onClick={(clickEvent) => {
                   clickEvent.stopPropagation()
-                  onEventClick(dayEvent)
+                  onEventClick(dayEvent, date)
                 }}
               />
             ) : null}
@@ -379,7 +376,7 @@ function EmployeeRow({
                 event.stopPropagation()
                 onCellClick(employee.id, date)
               }}
-              title="Ajouter un créneau"
+              title="Ajouter un créneau ou un événement"
               className={`flex items-center justify-center rounded-control text-faint transition-opacity hover:bg-surface-2 hover:opacity-100 focus-visible:opacity-100 ${
                 cellShifts.length === 0 && !dayEvent ? 'flex-1 opacity-0' : 'h-6 opacity-40'
               }`}

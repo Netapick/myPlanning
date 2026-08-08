@@ -127,7 +127,7 @@ export function PersonnelScreen() {
   return (
     <div>
       <PageHeader
-        title="Personnel"
+        title="Personnels"
         subtitle="Fiches, contrats et statuts de l'équipe."
         actions={
           <>

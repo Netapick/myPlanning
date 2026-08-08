@@ -33,3 +33,24 @@ export const useDismissNotification = () => {
       },
     }))
 }
+
+/**
+ * Masque toutes les alertes actuellement affichées d'un coup — le bouton
+ * « Tout effacer » du panneau. Prend les clés en argument plutôt que de les
+ * recalculer : c'est la liste déjà affichée à l'écran qui doit disparaître,
+ * pas un recalcul qui pourrait diverger d'un rendu à l'autre.
+ */
+export const useDismissAllNotifications = () => {
+  const mutate = useDataStore((state) => state.mutate)
+  return (keys: string[]) =>
+    mutate((doc) => ({
+      ...doc,
+      settings: {
+        ...doc.settings,
+        notifications: {
+          ...doc.settings.notifications,
+          dismissed: [...new Set([...doc.settings.notifications.dismissed, ...keys])],
+        },
+      },
+    }))
+}

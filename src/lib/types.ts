@@ -127,6 +127,21 @@ export const EVENT_TYPE_TONE: Record<EventType, 'neutral' | 'serious' | 'warning
 }
 
 /**
+ * Couleur fixe par type d'événement dans le planning — index dans la palette
+ * catégorielle (voir lib/palette.ts), choisi pour rester net et reconnaissable
+ * d'un coup d'œil : bleu = congés, rouge = maladie, violet = maternité,
+ * jaune = formation. « Autre » n'a pas d'index : il retombe sur un gris
+ * neutre (voir EventBanner), volontairement hors palette catégorielle
+ * puisqu'il ne représente aucune catégorie précise.
+ */
+export const EVENT_TYPE_COLOR_INDEX: Record<Exclude<EventType, 'autre'>, number> = {
+  conges: 1,
+  maladie: 8,
+  maternite: 7,
+  formation: 4,
+}
+
+/**
  * Une absence — congés, maladie, formation… Distincte d'un `Shift` : elle
  * couvre une période (pas un horaire dans une journée) et bloque cette
  * période plutôt que de la remplir.

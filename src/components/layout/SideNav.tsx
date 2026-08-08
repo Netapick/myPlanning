@@ -20,7 +20,7 @@ import { useUiStore } from '@/store/ui'
 const LINKS = [
   { to: '/', label: 'Tableau de bord', Icon: IconDashboard, end: true },
   { to: '/planning', label: 'Planning', Icon: IconCalendar, end: false },
-  { to: '/personnel', label: 'Personnel', Icon: IconUsers, end: false },
+  { to: '/personnel', label: 'Personnels', Icon: IconUsers, end: false },
   { to: '/parametres', label: 'Paramètres', Icon: IconSettings, end: false },
 ]
 
