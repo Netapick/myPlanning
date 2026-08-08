@@ -11,7 +11,7 @@ import {
   IconPlus,
 } from '@/components/ui/icons'
 import { dateRangesOverlap } from '@/lib/events'
-import { formatHours, workedMinutes } from '@/lib/time'
+import { formatDuration, workedMinutes } from '@/lib/time'
 import type { Employee, Event, Shift } from '@/lib/types'
 import { fullName } from '@/lib/types'
 import {
@@ -318,7 +318,14 @@ function EmployeeRow({
           >
             {fullName(employee)}
           </button>
-          <p className="tabular text-body-sm text-faint">{formatHours(weeklyMinutes)}</p>
+          <p className="tabular text-body-sm text-faint">
+            {formatDuration(weeklyMinutes)}/{formatDuration(employee.contract.weeklyHours * 60)}
+            {weeklyMinutes > employee.contract.weeklyHours * 60 ? (
+              <span className="ml-1 text-critical-text">
+                — Sup. +{formatDuration(weeklyMinutes - employee.contract.weeklyHours * 60)}
+              </span>
+            ) : null}
+          </p>
         </div>
       </div>
 
