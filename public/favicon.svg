@@ -1,0 +1,14 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Favicon — même composition que l'icône desktop (src-tauri/icons/icon-source.svg) :
+    fond bleu accent + pictogramme "calendar" de Lucide (https://lucide.dev),
+    seule source d'icônes utilisée dans ce projet.
+  -->
+  <rect width="32" height="32" rx="7" fill="#0052CC" />
+  <g transform="translate(5, 5) scale(0.9)" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 2v3" />
+    <path d="M16 2v3" />
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+  </g>
+</svg>
