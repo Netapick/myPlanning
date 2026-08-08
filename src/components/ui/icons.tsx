@@ -33,4 +33,5 @@ export {
   Download as IconDownload,
   Upload as IconUpload,
   Menu as IconMenu,
+  CalendarOff,
 } from 'lucide-react'

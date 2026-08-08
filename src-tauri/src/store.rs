@@ -72,7 +72,7 @@ pub fn validate_document(doc: &Value) -> Result<(), String> {
         }
     }
 
-    for key in ["employees", "teams", "shiftTemplates", "shifts"] {
+    for key in ["employees", "teams", "shiftTemplates", "shifts", "events"] {
         match obj.get(key) {
             Some(Value::Array(_)) => {}
             _ => return Err(format!("Le champ « {key} » doit être un tableau.")),

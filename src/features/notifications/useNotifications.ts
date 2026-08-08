@@ -33,16 +33,3 @@ export const useDismissNotification = () => {
       },
     }))
 }
-
-/** Réaffiche tout ce qui avait été masqué (Paramètres > Notifications). */
-export const useResetDismissed = () => {
-  const mutate = useDataStore((state) => state.mutate)
-  return () =>
-    mutate((doc) => ({
-      ...doc,
-      settings: {
-        ...doc.settings,
-        notifications: { ...doc.settings.notifications, dismissed: [] },
-      },
-    }))
-}

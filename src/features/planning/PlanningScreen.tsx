@@ -1,4 +1,5 @@
 import { useMemo, useState, type DragEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Avatar, FilterChip } from '@/components/ui/Badge'
 import { Button, IconButton } from '@/components/ui/Button'
 import { EmptyState, Panel } from '@/components/ui/Panel'
@@ -9,8 +10,9 @@ import {
   IconChevronRight,
   IconPlus,
 } from '@/components/ui/icons'
+import { dateRangesOverlap } from '@/lib/events'
 import { formatHours, workedMinutes } from '@/lib/time'
-import type { Employee, Shift } from '@/lib/types'
+import type { Employee, Event, Shift } from '@/lib/types'
 import { fullName } from '@/lib/types'
 import {
   isToday,
@@ -22,6 +24,8 @@ import {
   weekLabel,
 } from '@/lib/week'
 import { useDataStore } from '@/store/data'
+import { EventBanner } from './EventBanner'
+import { EventForm } from '../personnel/EventForm'
 import { ShiftCard } from './ShiftCard'
 import { ShiftForm } from './ShiftForm'
 
@@ -33,6 +37,12 @@ interface DraftTarget {
 /**
  * Planning hebdomadaire : grille Employé × 7 jours.
  *
+ * Une case peut contenir plusieurs créneaux (ex. matin + après-midi, coupés
+ * par une pause déjeuner) — ils s'empilent verticalement, chacun restant
+ * cliquable et déplaçable indépendamment. Les événements (absences, congés…)
+ * s'affichent séparément, en bandeau au-dessus des créneaux du jour : ils
+ * couvrent une période plutôt qu'un horaire, leur rendu est donc différent.
+ *
  * Le glisser-déposer déplace un créneau d'une case à l'autre — même employé
  * ou non, même jour ou non — en réutilisant simplement `upsertShift` avec un
  * `employeeId`/`date` modifiés. Aucune API dédiée : c'est la même mutation
@@ -43,14 +53,20 @@ export function PlanningScreen() {
   const teams = useDataStore((state) => state.document?.teams ?? [])
   const templates = useDataStore((state) => state.document?.shiftTemplates ?? [])
   const shifts = useDataStore((state) => state.document?.shifts ?? [])
+  const events = useDataStore((state) => state.document?.events ?? [])
   const upsertShift = useDataStore((state) => state.upsertShift)
   const removeShift = useDataStore((state) => state.removeShift)
+  const upsertEvent = useDataStore((state) => state.upsertEvent)
+  const removeEvent = useDataStore((state) => state.removeEvent)
+  const navigate = useNavigate()
 
   const [reference, setReference] = useState(() => new Date())
   const [teamFilter, setTeamFilter] = useState<string>('all')
   const [editing, setEditing] = useState<Shift | null>(null)
   const [draft, setDraft] = useState<DraftTarget | null>(null)
   const [formOpen, setFormOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [eventFormOpen, setEventFormOpen] = useState(false)
   const [dragging, setDragging] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DraftTarget | null>(null)
 
@@ -79,6 +95,22 @@ export function PlanningScreen() {
     return map
   }, [shifts, isoDays])
 
+  // Un événement peut déborder de la semaine affichée (ex. congés de deux
+  // semaines) : on ne garde que ceux qui touchent au moins un jour visible.
+  const weekStart = isoDays[0]
+  const weekEnd = isoDays[isoDays.length - 1]
+  const eventsByEmployee = useMemo(() => {
+    const map = new Map<string, Event[]>()
+    if (!weekStart || !weekEnd) return map
+    for (const event of events) {
+      if (!dateRangesOverlap(event.startDate, event.endDate, weekStart, weekEnd)) continue
+      const list = map.get(event.employeeId)
+      if (list) list.push(event)
+      else map.set(event.employeeId, [event])
+    }
+    return map
+  }, [events, weekStart, weekEnd])
+
   const weeklyMinutes = useMemo(() => {
     const totals = new Map<string, number>()
     for (const shift of shifts) {
@@ -100,6 +132,13 @@ export function PlanningScreen() {
     setEditing(shift)
     setDraft(null)
     setFormOpen(true)
+  }
+  const openEventEdit = (event: Event) => {
+    setEditingEvent(event)
+    setEventFormOpen(true)
+  }
+  const goToProfile = (employeeId: string) => {
+    navigate(`/personnel?employee=${employeeId}`)
   }
 
   const moveShift = (shift: Shift, target: DraftTarget) => {
@@ -187,11 +226,14 @@ export function PlanningScreen() {
                 days={isoDays}
                 dayDates={days}
                 shiftsByCell={shiftsByCell}
+                employeeEvents={eventsByEmployee.get(employee.id) ?? []}
                 weeklyMinutes={weeklyMinutes.get(employee.id) ?? 0}
                 dragging={dragging}
                 dropTarget={dropTarget}
+                onNameClick={goToProfile}
                 onCellClick={openCreate}
                 onShiftClick={openEdit}
+                onEventClick={openEventEdit}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onDragOver={setDropTarget}
@@ -212,6 +254,15 @@ export function PlanningScreen() {
         onSave={upsertShift}
         onDelete={editing ? () => removeShift(editing.id) : undefined}
       />
+
+      <EventForm
+        open={eventFormOpen}
+        event={editingEvent}
+        employees={visibleEmployees}
+        onClose={() => setEventFormOpen(false)}
+        onSave={upsertEvent}
+        onDelete={editingEvent ? () => removeEvent(editingEvent.id) : undefined}
+      />
     </div>
   )
 }
@@ -227,11 +278,14 @@ function EmployeeRow({
   days,
   dayDates,
   shiftsByCell,
+  employeeEvents,
   weeklyMinutes,
   dragging,
   dropTarget,
+  onNameClick,
   onCellClick,
   onShiftClick,
+  onEventClick,
   onDragStart,
   onDragEnd,
   onDragOver,
@@ -241,11 +295,14 @@ function EmployeeRow({
   days: string[]
   dayDates: Date[]
   shiftsByCell: Map<string, Shift[]>
+  employeeEvents: Event[]
   weeklyMinutes: number
   dragging: string | null
   dropTarget: DraftTarget | null
+  onNameClick: (employeeId: string) => void
   onCellClick: (employeeId: string, date: string) => void
   onShiftClick: (shift: Shift) => void
+  onEventClick: (event: Event) => void
   onDragStart: (event: DragEvent<HTMLButtonElement>, shift: Shift) => void
   onDragEnd: () => void
   onDragOver: (target: DraftTarget | null) => void
@@ -256,13 +313,21 @@ function EmployeeRow({
       <div className="sticky left-0 z-10 flex items-center gap-2.5 border-r border-b border-hairline bg-surface-1 px-3 py-2.5">
         <Avatar employee={employee} size={32} />
         <div className="min-w-0">
-          <p className="truncate text-body-sm font-medium text-ink">{fullName(employee)}</p>
+          <button
+            type="button"
+            onClick={() => onNameClick(employee.id)}
+            className="truncate text-body-sm font-medium text-ink hover:text-accent hover:underline"
+            title="Ouvrir la fiche"
+          >
+            {fullName(employee)}
+          </button>
           <p className="tabular text-body-sm text-faint">{formatHours(weeklyMinutes)}</p>
         </div>
       </div>
 
       {days.map((date, index) => {
         const cellShifts = shiftsByCell.get(`${employee.id}|${date}`) ?? []
+        const dayEvent = employeeEvents.find((event) => date >= event.startDate && date <= event.endDate)
         const isDropTarget = dropTarget?.employeeId === employee.id && dropTarget?.date === date
         const day = dayDates[index]
 
@@ -272,9 +337,9 @@ function EmployeeRow({
             role="button"
             tabIndex={0}
             aria-label={`Ajouter un créneau — ${day ? longDateLabel(day) : date}`}
-            onClick={() => cellShifts.length === 0 && onCellClick(employee.id, date)}
+            onClick={() => onCellClick(employee.id, date)}
             onKeyDown={(event) => {
-              if ((event.key === 'Enter' || event.key === ' ') && cellShifts.length === 0) {
+              if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault()
                 onCellClick(employee.id, date)
               }
@@ -289,6 +354,15 @@ function EmployeeRow({
               isDropTarget ? 'border-2 border-dashed border-accent bg-accent-soft' : ''
             } ${dragging && !isDropTarget ? 'bg-surface-0' : ''}`}
           >
+            {dayEvent ? (
+              <EventBanner
+                event={dayEvent}
+                onClick={(clickEvent) => {
+                  clickEvent.stopPropagation()
+                  onEventClick(dayEvent)
+                }}
+              />
+            ) : null}
             {cellShifts.map((shift) => (
               <ShiftCard
                 key={shift.id}
@@ -299,18 +373,19 @@ function EmployeeRow({
                 onDragEnd={onDragEnd}
               />
             ))}
-            {cellShifts.length === 0 ? (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onCellClick(employee.id, date)
-                }}
-                className="flex flex-1 items-center justify-center rounded-control text-faint opacity-0 transition-opacity hover:bg-surface-2 hover:opacity-100 focus-visible:opacity-100"
-              >
-                <IconPlus size={16} />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onCellClick(employee.id, date)
+              }}
+              title="Ajouter un créneau"
+              className={`flex items-center justify-center rounded-control text-faint transition-opacity hover:bg-surface-2 hover:opacity-100 focus-visible:opacity-100 ${
+                cellShifts.length === 0 && !dayEvent ? 'flex-1 opacity-0' : 'h-6 opacity-40'
+              }`}
+            >
+              <IconPlus size={14} />
+            </button>
           </div>
         )
       })}

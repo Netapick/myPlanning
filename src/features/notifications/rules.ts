@@ -1,5 +1,6 @@
+import { activeEventFor } from '@/lib/events'
 import { absoluteSpan, formatHours, workedMinutes } from '@/lib/time'
-import { FIXED_TERM_CONTRACTS, fullName } from '@/lib/types'
+import { EVENT_TYPE_LABELS, FIXED_TERM_CONTRACTS, fullName } from '@/lib/types'
 import type { PlanningData, Shift } from '@/lib/types'
 import { daysFromToday, isoWeekday, longDateLabel, toIso, weekDays } from '@/lib/week'
 
@@ -123,12 +124,17 @@ export function computeNotifications(data: PlanningData, reference: Date): Notif
       })
     }
 
-    // Une personne absente toute la semaine n'a pas à être signalée en
-    // sous-charge : son absence est déjà l'explication.
+    // Une personne en événement toute la semaine n'a pas à être signalée en
+    // sous-charge : son absence est déjà l'explication. On ne regarde que le
+    // premier jour planifié comme repère — un cas limite acceptable ici.
+    const hasWeekLongEvent = weekIsoDates.every(
+      (date) => activeEventFor(data.events, employee.id, date) !== undefined,
+    )
     if (
       enabled('undertime') &&
       gap < -tolerance &&
       employee.status === 'actif' &&
+      !hasWeekLongEvent &&
       shifts.length > 0
     ) {
       results.push({
@@ -167,14 +173,16 @@ export function computeNotifications(data: PlanningData, reference: Date): Notif
       }
     }
 
-    if (enabled('absent-scheduled') && (employee.status === 'conges' || employee.status === 'maladie')) {
+    if (enabled('absent-scheduled')) {
       for (const shift of shifts) {
+        const event = activeEventFor(data.events, employee.id, shift.date)
+        if (!event) continue
         results.push({
           key: `absent-scheduled:${shift.id}`,
           rule: 'absent-scheduled',
           severity: 'serious',
           title: `${fullName(employee)} est planifié·e alors qu'il/elle est absent·e`,
-          detail: `« ${shift.label} » le ${longDateLabel(new Date(`${shift.date}T12:00:00`))} — statut : ${employee.status === 'conges' ? 'congés payés' : 'arrêt maladie'}.`,
+          detail: `« ${shift.label} » le ${longDateLabel(new Date(`${shift.date}T12:00:00`))} — ${EVENT_TYPE_LABELS[event.type].toLowerCase()}.`,
           link: '/planning',
         })
       }

@@ -106,6 +106,42 @@ export interface Shift {
   note?: string
 }
 
+/** Type d'un événement — ce qui n'est pas du travail planifié. */
+export type EventType = 'conges' | 'maladie' | 'maternite' | 'formation' | 'autre'
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+  conges: 'Congés payés',
+  maladie: 'Arrêt maladie',
+  maternite: 'Congé maternité/paternité',
+  formation: 'Formation',
+  autre: 'Autre',
+}
+
+/** Teinte de statut réutilisée par les badges — pas la palette catégorielle. */
+export const EVENT_TYPE_TONE: Record<EventType, 'neutral' | 'serious' | 'warning'> = {
+  conges: 'neutral',
+  maladie: 'serious',
+  maternite: 'neutral',
+  formation: 'warning',
+  autre: 'neutral',
+}
+
+/**
+ * Une absence — congés, maladie, formation… Distincte d'un `Shift` : elle
+ * couvre une période (pas un horaire dans une journée) et bloque cette
+ * période plutôt que de la remplir.
+ */
+export interface Event {
+  id: Id
+  employeeId: Id
+  type: EventType
+  /** Date ISO « AAAA-MM-JJ » inclusive. */
+  startDate: string
+  /** Date ISO « AAAA-MM-JJ » inclusive — peut être égale à `startDate`. */
+  endDate: string
+  note?: string
+}
+
 export interface NotificationSettings {
   /** Préavis, en jours, de l'alerte de fin de contrat. */
   contractNoticeDays: number
@@ -128,6 +164,7 @@ export interface PlanningData {
   teams: Team[]
   shiftTemplates: ShiftTemplate[]
   shifts: Shift[]
+  events: Event[]
   settings: Settings
 }
 

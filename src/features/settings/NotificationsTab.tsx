@@ -1,7 +1,5 @@
-import { Button } from '@/components/ui/Button'
 import { Panel, PanelHeader } from '@/components/ui/Panel'
 import { RULE_DESCRIPTIONS, RULE_LABELS, type RuleId } from '@/features/notifications/rules'
-import { useResetDismissed } from '@/features/notifications/useNotifications'
 import { useDataStore } from '@/store/data'
 
 const RULES: RuleId[] = [
@@ -17,7 +15,6 @@ const RULES: RuleId[] = [
 export function NotificationsTab() {
   const settings = useDataStore((state) => state.document?.settings)
   const updateSettings = useDataStore((state) => state.updateSettings)
-  const resetDismissed = useResetDismissed()
 
   if (!settings) return null
   const { notifications } = settings
@@ -48,13 +45,13 @@ export function NotificationsTab() {
                   role="switch"
                   aria-checked={active}
                   onClick={() => toggleRule(rule)}
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                     active ? 'bg-accent' : 'bg-surface-3'
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-raised transition-transform ${
-                      active ? 'translate-x-5' : 'translate-x-0.5'
+                    className={`h-5 w-5 rounded-full bg-white shadow-raised transition-transform ${
+                      active ? 'translate-x-[22px]' : 'translate-x-0.5'
                     }`}
                   />
                 </button>
@@ -118,27 +115,6 @@ export function NotificationsTab() {
             </div>
           </label>
         </div>
-      </Panel>
-
-      <Panel>
-        <PanelHeader
-          title="Alertes masquées"
-          action={
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={notifications.dismissed.length === 0}
-              onClick={resetDismissed}
-            >
-              Tout réafficher
-            </Button>
-          }
-        />
-        <p className="px-5 py-4 text-body-sm text-muted">
-          {notifications.dismissed.length === 0
-            ? 'Aucune alerte masquée pour le moment.'
-            : `${notifications.dismissed.length} alerte${notifications.dismissed.length > 1 ? 's' : ''} masquée${notifications.dismissed.length > 1 ? 's' : ''} manuellement.`}
-        </p>
       </Panel>
     </div>
   )

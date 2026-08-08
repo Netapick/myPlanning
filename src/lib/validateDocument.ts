@@ -10,7 +10,7 @@ export function validateDocumentShape(value: unknown): string | null {
   }
   const doc = value as Record<string, unknown>
   if (doc.version !== 1) return `Version de document inattendue : ${JSON.stringify(doc.version)}.`
-  for (const key of ['employees', 'teams', 'shiftTemplates', 'shifts']) {
+  for (const key of ['employees', 'teams', 'shiftTemplates', 'shifts', 'events']) {
     if (!Array.isArray(doc[key])) return `Le champ « ${key} » doit être un tableau.`
   }
   if (typeof doc.settings !== 'object' || doc.settings === null) {

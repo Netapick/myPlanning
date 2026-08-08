@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { loadDocument, saveDocument } from '@/lib/api'
 import type {
   Employee,
+  Event,
   Id,
   PlanningData,
   Settings,
@@ -49,6 +50,8 @@ interface DataState {
   removeTemplate: (id: Id) => void
   upsertShift: (shift: Shift) => void
   removeShift: (id: Id) => void
+  upsertEvent: (event: Event) => void
+  removeEvent: (id: Id) => void
   updateSettings: (patch: Partial<Settings>) => void
 }
 
@@ -153,6 +156,7 @@ export const useDataStore = create<DataState>()((set, get) => {
         ...doc,
         employees: doc.employees.filter((employee) => employee.id !== id),
         shifts: doc.shifts.filter((shift) => shift.employeeId !== id),
+        events: doc.events.filter((event) => event.employeeId !== id),
       })),
 
     upsertTeam: (team) => mutate((doc) => ({ ...doc, teams: upsert(doc.teams, team) })),
@@ -185,6 +189,11 @@ export const useDataStore = create<DataState>()((set, get) => {
 
     removeShift: (id) =>
       mutate((doc) => ({ ...doc, shifts: doc.shifts.filter((shift) => shift.id !== id) })),
+
+    upsertEvent: (event) => mutate((doc) => ({ ...doc, events: upsert(doc.events, event) })),
+
+    removeEvent: (id) =>
+      mutate((doc) => ({ ...doc, events: doc.events.filter((event) => event.id !== id) })),
 
     updateSettings: (patch) =>
       mutate((doc) => ({ ...doc, settings: { ...doc.settings, ...patch } })),

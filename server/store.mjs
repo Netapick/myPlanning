@@ -45,7 +45,7 @@ const isPlainObject = (value) =>
 export function validateDocument(doc) {
   if (!isPlainObject(doc)) return 'Le document doit être un objet JSON.'
   if (doc.version !== 1) return `Version de document inattendue : ${JSON.stringify(doc.version)}.`
-  for (const key of ['employees', 'teams', 'shiftTemplates', 'shifts']) {
+  for (const key of ['employees', 'teams', 'shiftTemplates', 'shifts', 'events']) {
     if (!Array.isArray(doc[key])) return `Le champ « ${key} » doit être un tableau.`
   }
   if (!isPlainObject(doc.settings)) return 'Le champ « settings » doit être un objet.'

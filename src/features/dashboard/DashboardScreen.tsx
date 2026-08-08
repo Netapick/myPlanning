@@ -23,7 +23,7 @@ export function DashboardScreen() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <KpiCard
           icon={<IconUsers size={20} />}
-          label="Personnel actif"
+          label={activeCount > 1 ? 'Personnes actives' : 'Personne active'}
           value={String(activeCount)}
         />
         <KpiCard
