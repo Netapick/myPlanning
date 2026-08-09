@@ -26,6 +26,12 @@ dist-ssr
 /src-tauri/target
 /src-tauri/gen
 
+# Installateurs buildés localement (npm run tauri:build) — copiés ici pour un
+# accès facile, jamais committés : le repo est public et le pipeline CI
+# (.github/workflows/release.yml) publie déjà les installateurs officiels en
+# GitHub Release sur chaque tag.
+/release
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
