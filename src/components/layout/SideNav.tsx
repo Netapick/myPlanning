@@ -60,9 +60,10 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <p className="mt-auto px-6 pt-4 text-body-sm text-faint">
-        Données locales · v{__APP_VERSION__}
-      </p>
+      <div className="mt-auto px-6 pt-4 text-body-sm text-faint">
+        <p>Données locales · v{__APP_VERSION__}</p>
+        <p>© {new Date().getFullYear()} Julien Gataleta — Tous droits réservés</p>
+      </div>
     </>
   )
 }
