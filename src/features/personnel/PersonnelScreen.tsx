@@ -271,6 +271,8 @@ export function PersonnelScreen() {
         open={formOpen}
         employee={editing}
         teams={teams}
+        events={events}
+        shifts={shifts}
         onClose={() => setFormOpen(false)}
         onSave={upsertEmployee}
       />

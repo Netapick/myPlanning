@@ -1,10 +1,17 @@
-import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { IconAlert } from '@/components/ui/icons'
 import { useDataStore } from '@/store/data'
+import { useUiStore } from '@/store/ui'
 import { SideNav } from './SideNav'
+import { SplashScreen } from './SplashScreen'
 import { TopBar } from './TopBar'
+
+/** Survit à un F5 (même session) mais pas à une fermeture/réouverture de fenêtre ni à un relancement de l'exécutable. */
+const SPLASH_KEY = 'myplanning.splashShown'
+/** Durée plancher : évite un flash disgracieux si le disque répond instantanément. */
+const SPLASH_MIN_MS = 700
 
 /**
  * Coquille de l'application : barre latérale + barre du haut + plan de
@@ -16,17 +23,52 @@ export function AppShell() {
   const status = useDataStore((state) => state.status)
   const loadError = useDataStore((state) => state.loadError)
   const load = useDataStore((state) => state.load)
+  const location = useLocation()
+  const navigationType = useNavigationType()
+  const recordNavigation = useUiStore((state) => state.recordNavigation)
+
+  // Lazy initializer : posé une seule fois, de façon synchrone, au tout
+  // premier rendu — pas de risque de double-affichage du splash en StrictMode.
+  const [isFreshSession] = useState(() => {
+    try {
+      if (sessionStorage.getItem(SPLASH_KEY)) return false
+      sessionStorage.setItem(SPLASH_KEY, '1')
+      return true
+    } catch {
+      return false
+    }
+  })
+  const [splashFloorDone, setSplashFloorDone] = useState(false)
 
   useEffect(() => {
     void load()
   }, [load])
 
+  useEffect(() => {
+    recordNavigation(location.pathname + location.search, navigationType)
+  }, [location, navigationType, recordNavigation])
+
+  useEffect(() => {
+    if (!isFreshSession) return
+    const timer = setTimeout(() => setSplashFloorDone(true), SPLASH_MIN_MS)
+    return () => clearTimeout(timer)
+  }, [isFreshSession])
+
+  const showSplash = isFreshSession && (status === 'loading' || !splashFloorDone)
+
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <SideNav />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
-        <main className="flex-1 p-4 sm:p-canvas">
+        {/* Seul point de défilement pour les écrans qui ne gèrent pas leur
+            propre zone défilante (Tableau de bord, Personnels, Paramètres).
+            Le Planning gère la sienne en interne (voir son `Panel`) : dans ce
+            cas ce `overflow-y-auto` ne s'active jamais, il n'y a donc jamais
+            deux barres de défilement en même temps. `h-screen` + `overflow-
+            hidden` sur le conteneur racine (au lieu de `min-h-screen`)
+            empêche aussi la page elle-même de dépasser la fenêtre. */}
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-canvas">
           {status === 'loading' ? (
             <p className="py-16 text-center text-body-md text-muted">Chargement du planning…</p>
           ) : status === 'error' ? (
@@ -36,6 +78,7 @@ export function AppShell() {
           )}
         </main>
       </div>
+      {showSplash ? <SplashScreen /> : null}
     </div>
   )
 }

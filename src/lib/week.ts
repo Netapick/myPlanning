@@ -1,4 +1,4 @@
-import { addDays, format, isSameMonth, parseISO, startOfWeek } from 'date-fns'
+import { addDays, format, isSameMonth, parseISO, setISOWeek, startOfISOWeek, startOfWeek } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
 /**
@@ -49,6 +49,23 @@ export const weekLabel = (date: Date): string => {
 
 /** Numéro de semaine ISO, affiché à côté de la navigation. */
 export const weekNumber = (date: Date) => Number(format(date, 'I', { locale: fr }))
+
+/** « 2026-W42 » — valeur d'un `<input type="week">`. */
+export const isoWeekValue = (date: Date) => format(date, "RRRR-'W'II")
+
+/** Lundi de la semaine ISO désignée par une valeur `<input type="week">`, ou `null` si invalide. */
+export const fromIsoWeekValue = (value: string): Date | null => {
+  const match = /^(\d{4})-W(\d{2})$/.exec(value)
+  if (!match) return null
+  const [, yearStr, weekStr] = match
+  const year = Number(yearStr)
+  const week = Number(weekStr)
+  if (week < 1 || week > 53) return null
+  // Le 4 janvier tombe toujours dans la semaine 1 de sa propre année ISO
+  // (définition ISO 8601) — un point de départ fiable pour atteindre n'importe
+  // quelle semaine de `year` via `setISOWeek`.
+  return startOfISOWeek(setISOWeek(new Date(year, 0, 4), week))
+}
 
 export const isToday = (date: Date) => toIso(date) === toIso(new Date())
 

@@ -1,6 +1,17 @@
+import { useNavigate } from 'react-router-dom'
 import { IconButton } from '@/components/ui/Button'
-import { IconMenu, IconMoon, IconSearch, IconSun } from '@/components/ui/icons'
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconMenu,
+  IconMoon,
+  IconRefresh,
+  IconSearch,
+  IconSun,
+} from '@/components/ui/icons'
 import { NotificationsBell } from '@/features/notifications/NotificationsBell'
+import { isTauri } from '@/lib/api'
+import { useDataStore } from '@/store/data'
 import { useUiStore } from '@/store/ui'
 import { SaveIndicator } from './SaveIndicator'
 
@@ -16,10 +27,41 @@ export function TopBar() {
   const resolvedTheme = useUiStore((state) => state.resolvedTheme)
   const setThemeMode = useUiStore((state) => state.setThemeMode)
   const setMobileNavOpen = useUiStore((state) => state.setMobileNavOpen)
+  const canGoBack = useUiStore((state) => state.canGoBack)
+  const canGoForward = useUiStore((state) => state.canGoForward)
+  const navigate = useNavigate()
+  const load = useDataStore((state) => state.load)
 
   return (
     <header className="sticky top-0 z-40 flex h-16 w-full shrink-0 items-center justify-between gap-4 border-b border-hairline bg-surface-1 px-4 sm:px-canvas">
       <div className="flex flex-1 items-center gap-3">
+        {isTauri() ? (
+          // La fenêtre desktop utilise le chrome natif de l'OS, sans bouton
+          // précédent/suivant de navigateur — on le recrée ici, absent en mode
+          // web où le navigateur a déjà les siens.
+          <div className="flex items-center gap-1">
+            <IconButton
+              label="Page précédente"
+              disabled={!canGoBack}
+              className={canGoBack ? '' : 'pointer-events-none opacity-40'}
+              onClick={() => navigate(-1)}
+            >
+              <IconChevronLeft size={18} />
+            </IconButton>
+            <IconButton
+              label="Page suivante"
+              disabled={!canGoForward}
+              className={canGoForward ? '' : 'pointer-events-none opacity-40'}
+              onClick={() => navigate(1)}
+            >
+              <IconChevronRight size={18} />
+            </IconButton>
+            <IconButton label="Rafraîchir" onClick={() => void load()}>
+              <IconRefresh size={18} />
+            </IconButton>
+          </div>
+        ) : null}
+
         <IconButton
           label="Ouvrir le menu"
           className="lg:hidden"

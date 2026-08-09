@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { SelectField, TextField, TimeField } from '@/components/ui/Field'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
-import { isValidTime } from '@/lib/time'
+import { CalendarOff } from '@/components/ui/icons'
+import { publicHolidayName } from '@/lib/holidays'
+import { formatDuration, isValidTime, workedMinutes } from '@/lib/time'
 import type { Employee, Event, EventType, Shift, ShiftTemplate } from '@/lib/types'
 import { EVENT_TYPE_LABELS, fullName } from '@/lib/types'
 import { longDateLabel, toIso } from '@/lib/week'
@@ -210,6 +212,18 @@ export function PlanningEntryModal({
   const employee = employees.find((candidate) => candidate.id === employeeId)
   const crossesMidnight =
     isValidTime(shiftForm.start) && isValidTime(shiftForm.end) && shiftForm.end <= shiftForm.start
+  const holidayName = date ? publicHolidayName(date) : null
+
+  const createRecupFromHoliday = () => {
+    const minutes = workedMinutes(shiftForm.start, shiftForm.end, Number(shiftForm.breakMinutes))
+    setEventForm({
+      type: 'ferie',
+      startDate: date,
+      endDate: date,
+      note: `Récup. ${formatDuration(minutes)} férié`,
+    })
+    setTab('event')
+  }
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'shift', label: 'Créneau' },
@@ -270,6 +284,18 @@ export function PlanningEntryModal({
 
       {tab === 'shift' ? (
         <div className="flex flex-col gap-4">
+          {holidayName ? (
+            <div className="flex items-center justify-between gap-3 rounded-control border border-warning/40 bg-warning-soft px-3 py-2.5">
+              <p className="flex items-center gap-2 text-body-sm text-warning-text">
+                <CalendarOff size={16} />
+                Jour férié — {holidayName}
+              </p>
+              <Button variant="secondary" size="sm" onClick={createRecupFromHoliday}>
+                Créer une récupération
+              </Button>
+            </div>
+          ) : null}
+
           {templates.length > 0 ? (
             <SelectField
               label="Tranche horaire"

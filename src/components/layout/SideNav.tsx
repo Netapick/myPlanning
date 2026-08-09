@@ -33,7 +33,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <div>
           <h1 className="text-headline-md font-bold text-accent">myPlanning</h1>
-          <p className="text-body-sm text-muted">Gestion locale</p>
+          <p className="text-body-sm text-muted">WELDOM - Cosne sur Loire</p>
         </div>
       </div>
 

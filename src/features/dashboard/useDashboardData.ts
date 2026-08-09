@@ -1,31 +1,53 @@
 import { useMemo } from 'react'
+import { employeeBalances } from '@/lib/balances'
 import { workedMinutes } from '@/lib/time'
-import type { Employee, Shift } from '@/lib/types'
-import { isToday, isoWeekday, toIso, weekDays } from '@/lib/week'
+import { FIXED_TERM_CONTRACTS } from '@/lib/types'
+import type { ContractType, Employee, Event } from '@/lib/types'
+import { daysFromToday, isoWeekday, toIso, weekDays } from '@/lib/week'
 import { useDataStore } from '@/store/data'
 
-export interface DayTotal {
-  date: Date;
-  iso: string;
-  minutes: number;
-  isToday: boolean
+export interface UpcomingEventItem {
+  kind: 'event'
+  employee: Employee
+  event: Event
+  /** Solde d'heures sup. restantes de la personne, pour l'indication de récupération. */
+  overtimeRemainingMinutes: number
+  /** Date de tri — début de l'événement. */
+  sortDate: string
 }
 
-export interface UpcomingShift {
-  shift: Shift
+export interface UpcomingContractEndItem {
+  kind: 'contract-ending'
   employee: Employee
-  /** Horodatage de début, pour trier et pour juger "en cours" / "à venir". */
-  startsAt: Date
-  endsAt: Date
+  endDate: string
+  contractType: ContractType
+  /** Jours restants avant l'échéance — pilote l'urgence affichée. */
+  remainingDays: number
+  /** Date de tri — échéance du contrat. */
+  sortDate: string
+}
+
+export type UpcomingItem = UpcomingEventItem | UpcomingContractEndItem
+
+export interface TeamBalanceAlert {
+  employee: Employee
+  leaveRemaining: number
+  overtimeRemainingMinutes: number
+  leaveLow: boolean
+  overtimeHigh: boolean
 }
 
 export interface DashboardData {
   activeCount: number
   weeklyMinutes: number
   occupancyRate: number
-  dayTotals: DayTotal[]
-  upcoming: UpcomingShift[]
+  upcomingItems: UpcomingItem[]
+  balanceAlerts: TeamBalanceAlert[]
 }
+
+/** Seuils d'alerte — CP restants au plancher, heures sup. qui s'accumulent. */
+const LEAVE_LOW_DAYS = 2
+const OVERTIME_HIGH_MINUTES = 600
 
 /**
  * Tous les agrégats du tableau de bord, calculés une seule fois par rendu.
@@ -39,12 +61,13 @@ export function useDashboardData(): DashboardData {
       activeCount: 0,
       weeklyMinutes: 0,
       occupancyRate: 0,
-      dayTotals: [],
-      upcoming: [],
+      upcomingItems: [],
+      balanceAlerts: [],
     }
     if (!document) return empty
 
     const now = new Date()
+    const today = toIso(now)
     const days = weekDays(now)
     const isoDays = days.map(toIso)
     const activeEmployees = document.employees.filter(
@@ -53,19 +76,10 @@ export function useDashboardData(): DashboardData {
     const employeeById = new Map(document.employees.map((employee) => [employee.id, employee]))
 
     const weekShifts = document.shifts.filter((shift) => isoDays.includes(shift.date))
-
-    const minutesByDay = new Map<string, number>()
-    for (const shift of weekShifts) {
-      const minutes = workedMinutes(shift.start, shift.end, shift.breakMinutes)
-      minutesByDay.set(shift.date, (minutesByDay.get(shift.date) ?? 0) + minutes)
-    }
-
-    const dayTotals: DayTotal[] = days.map((date) => {
-      const iso = toIso(date)
-      return { date, iso, minutes: minutesByDay.get(iso) ?? 0, isToday: isToday(date) }
-    })
-
-    const weeklyMinutes = dayTotals.reduce((total, day) => total + day.minutes, 0)
+    const weeklyMinutes = weekShifts.reduce(
+      (total, shift) => total + workedMinutes(shift.start, shift.end, shift.breakMinutes),
+      0,
+    )
 
     // Occupation = heures planifiées / somme des quotas contractuels des
     // personnes actives ce jour d'ouverture — un repère de charge, pas une
@@ -76,27 +90,76 @@ export function useDashboardData(): DashboardData {
     }, 0)
     const occupancyRate = openingWeeklyQuota > 0 ? weeklyMinutes / openingWeeklyQuota : 0
 
-    const upcoming: UpcomingShift[] = document.shifts
-      .map((shift) => {
-        const employee = employeeById.get(shift.employeeId)
+    const upcomingEvents: UpcomingEventItem[] = document.events
+      .map((event) => {
+        const employee = employeeById.get(event.employeeId)
         if (!employee || employee.archived) return null
-        const startsAt = new Date(`${shift.date}T${shift.start}:00`)
-        const endsAt = new Date(startsAt)
-        const [eh = 0, em = 0] = shift.end.split(':').map(Number)
-        endsAt.setHours(eh, em, 0, 0)
-        if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
-        return { shift, employee, startsAt, endsAt }
+        return {
+          kind: 'event' as const,
+          event,
+          employee,
+          overtimeRemainingMinutes: employeeBalances(employee, document.events, document.shifts).overtimeRemainingMinutes,
+          sortDate: event.startDate,
+        }
       })
-      .filter((entry): entry is UpcomingShift => entry !== null && entry.endsAt >= now)
-      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      .filter((entry): entry is UpcomingEventItem => entry !== null && entry.event.endDate >= today)
+
+    // Même fenêtre d'alerte que la notification « Fin de contrat proche »
+    // (Paramètres > Notifications) : une échéance de CDD/intérim/stage/
+    // alternance mérite d'apparaître ici aussi, pas seulement dans la cloche.
+    const contractNoticeDays = document.settings.notifications.contractNoticeDays
+    const contractEndingEnabled = document.settings.notifications.enabledRules['contract-ending'] !== false
+    const upcomingContractEnds: UpcomingContractEndItem[] = contractEndingEnabled
+      ? document.employees
+          .filter((employee) => !employee.archived)
+          .map((employee) => {
+            const { endDate, type } = employee.contract
+            if (!endDate || !FIXED_TERM_CONTRACTS.includes(type)) return null
+            const remainingDays = daysFromToday(endDate)
+            if (remainingDays < 0 || remainingDays > contractNoticeDays) return null
+            return {
+              kind: 'contract-ending' as const,
+              employee,
+              endDate,
+              contractType: type,
+              remainingDays,
+              sortDate: endDate,
+            }
+          })
+          .filter((entry): entry is UpcomingContractEndItem => entry !== null)
+      : []
+
+    const upcomingItems: UpcomingItem[] = [...upcomingEvents, ...upcomingContractEnds]
+      .sort((a, b) => a.sortDate.localeCompare(b.sortDate))
       .slice(0, 6)
+
+    const balanceAlerts: TeamBalanceAlert[] = activeEmployees
+      .map((employee) => {
+        const balances = employeeBalances(employee, document.events, document.shifts)
+        const leaveLow = employee.leaveBalance.accrued > 0 && balances.leaveRemaining <= LEAVE_LOW_DAYS
+        const overtimeHigh = balances.overtimeRemainingMinutes >= OVERTIME_HIGH_MINUTES
+        return {
+          employee,
+          leaveRemaining: balances.leaveRemaining,
+          overtimeRemainingMinutes: balances.overtimeRemainingMinutes,
+          leaveLow,
+          overtimeHigh,
+        }
+      })
+      .filter((alert) => alert.leaveLow || alert.overtimeHigh)
+      .sort((a, b) => {
+        const scoreOf = (alert: TeamBalanceAlert) =>
+          (alert.leaveLow ? LEAVE_LOW_DAYS - alert.leaveRemaining : 0) +
+          (alert.overtimeHigh ? alert.overtimeRemainingMinutes / 60 : 0)
+        return scoreOf(b) - scoreOf(a)
+      })
 
     return {
       activeCount: activeEmployees.filter((employee) => employee.status === 'actif').length,
       weeklyMinutes,
       occupancyRate,
-      dayTotals,
-      upcoming,
+      upcomingItems,
+      balanceAlerts,
     }
   }, [document])
 }

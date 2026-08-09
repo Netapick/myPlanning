@@ -5,6 +5,7 @@ import { router } from '@/routes/router'
 import { installSaveGuards } from '@/store/data'
 import { initTheme } from '@/store/ui'
 import '@/styles/theme.css'
+import '@/styles/print.css'
 
 initTheme()
 installSaveGuards()

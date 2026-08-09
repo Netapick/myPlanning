@@ -278,6 +278,7 @@
       "colorIndex": 4
     }
   ],
+  "events": [],
   "settings": {
     "openingDays": [1, 2, 3, 4, 5],
     "notifications": {

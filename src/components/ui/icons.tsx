@@ -33,5 +33,7 @@ export {
   Download as IconDownload,
   Upload as IconUpload,
   Menu as IconMenu,
+  Printer as IconPrinter,
+  RotateCw as IconRefresh,
   CalendarOff,
 } from 'lucide-react'

@@ -57,6 +57,12 @@ export interface Employee {
   status: EmployeeStatus
   /** Sorti des effectifs : masqué partout, mais ses créneaux passés restent. */
   archived: boolean
+  leaveBalance: {
+    /** Jours de CP acquis, ajustés manuellement (ex. en début de mois/année). */
+    accrued: number
+  }
+  /** Solde d'heures sup. à récupérer, ajustable manuellement — pas de calcul d'acquisition automatique. */
+  overtimeBalanceMinutes: number
 }
 
 export interface Team {
@@ -107,13 +113,22 @@ export interface Shift {
 }
 
 /** Type d'un événement — ce qui n'est pas du travail planifié. */
-export type EventType = 'conges' | 'maladie' | 'maternite' | 'formation' | 'autre'
+export type EventType =
+  | 'conges'
+  | 'maladie'
+  | 'maternite'
+  | 'formation'
+  | 'repos'
+  | 'ferie'
+  | 'autre'
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   conges: 'Congés payés',
   maladie: 'Arrêt maladie',
   maternite: 'Congé maternité/paternité',
   formation: 'Formation',
+  repos: 'Repos',
+  ferie: 'Récupération jour férié',
   autre: 'Autre',
 }
 
@@ -123,6 +138,8 @@ export const EVENT_TYPE_TONE: Record<EventType, 'neutral' | 'serious' | 'warning
   maladie: 'serious',
   maternite: 'neutral',
   formation: 'warning',
+  repos: 'neutral',
+  ferie: 'neutral',
   autre: 'neutral',
 }
 
@@ -130,15 +147,18 @@ export const EVENT_TYPE_TONE: Record<EventType, 'neutral' | 'serious' | 'warning
  * Couleur fixe par type d'événement dans le planning — index dans la palette
  * catégorielle (voir lib/palette.ts), choisi pour rester net et reconnaissable
  * d'un coup d'œil : bleu = congés, rouge = maladie, violet = maternité,
- * jaune = formation. « Autre » n'a pas d'index : il retombe sur un gris
- * neutre (voir EventBanner), volontairement hors palette catégorielle
- * puisqu'il ne représente aucune catégorie précise.
+ * jaune = formation, aqua = repos, vert = récupération jour férié. « Autre »
+ * n'a pas d'index : il retombe sur un gris neutre (voir EventBanner),
+ * volontairement hors palette catégorielle puisqu'il ne représente aucune
+ * catégorie précise.
  */
 export const EVENT_TYPE_COLOR_INDEX: Record<Exclude<EventType, 'autre'>, number> = {
   conges: 1,
   maladie: 8,
   maternite: 7,
   formation: 4,
+  repos: 3,
+  ferie: 6,
 }
 
 /**

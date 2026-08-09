@@ -12,6 +12,21 @@ import type {
 } from '@/lib/types'
 
 /**
+ * Comble les champs RH ajoutés après coup (soldes CP/heures sup.) sur des
+ * fiches employé lues depuis un fichier plus ancien — import de sauvegarde ou
+ * document jamais réécrit depuis. La validation reste structurelle uniquement
+ * (voir `validateDocument.ts`), donc rien ne garantit leur présence en amont.
+ */
+const normalizeDocument = (document: PlanningData): PlanningData => ({
+  ...document,
+  employees: document.employees.map((employee) => ({
+    ...employee,
+    leaveBalance: employee.leaveBalance ?? { accrued: 0 },
+    overtimeBalanceMinutes: employee.overtimeBalanceMinutes ?? 0,
+  })),
+})
+
+/**
  * L'état de l'application, adossé au fichier `data/planning.json`.
  *
  * Chaque mutation produit un nouveau document et programme une sauvegarde.
@@ -72,6 +87,15 @@ const upsert = <T extends { id: Id }>(items: T[], item: T): T[] => {
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 let inFlight: Promise<void> = Promise.resolve()
 
+/**
+ * Les commandes Tauri renvoient leur `Err` telle quelle (une chaîne, pas un
+ * objet `Error`) — `(error as Error).message` y vaudrait `undefined` et
+ * avalerait silencieusement le vrai message. Le mode web, lui, lève de
+ * vraies `Error`. Les deux cas doivent aboutir à un message affichable.
+ */
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
+
 export const useDataStore = create<DataState>()((set, get) => {
   /** Écrit le document courant ; les erreurs remontent à l'indicateur d'état. */
   const writeNow = async () => {
@@ -85,7 +109,7 @@ export const useDataStore = create<DataState>()((set, get) => {
       if (saveTimer === null) set({ saveStatus: 'idle', savedAt: result.savedAt })
       else set({ savedAt: result.savedAt })
     } catch (error) {
-      set({ saveStatus: 'error', saveError: (error as Error).message })
+      set({ saveStatus: 'error', saveError: errorMessage(error) })
     }
   }
 
@@ -120,12 +144,12 @@ export const useDataStore = create<DataState>()((set, get) => {
         const result = await loadDocument()
         set({
           status: 'ready',
-          document: result.document,
+          document: normalizeDocument(result.document),
           file: result.file,
           savedAt: result.savedAt,
         })
       } catch (error) {
-        set({ status: 'error', loadError: (error as Error).message })
+        set({ status: 'error', loadError: errorMessage(error) })
       }
     },
 
@@ -141,7 +165,7 @@ export const useDataStore = create<DataState>()((set, get) => {
     },
 
     replace: (next) => {
-      set({ document: next })
+      set({ document: normalizeDocument(next) })
       scheduleSave()
     },
 

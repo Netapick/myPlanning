@@ -47,6 +47,18 @@ interface UiState {
 
   mobileNavOpen: boolean
   setMobileNavOpen: (open: boolean) => void
+
+  /**
+   * Petit historique de navigation local, pour griser précédent/suivant en
+   * desktop Tauri (la fenêtre n'a pas de chrome de navigateur). React Router
+   * n'expose pas la pile d'historique : on la reconstruit ici à partir de
+   * chaque changement de route, voir `useTrackNavigation` dans AppShell.tsx.
+   */
+  navHistory: string[]
+  navIndex: number
+  canGoBack: boolean
+  canGoForward: boolean
+  recordNavigation: (pathname: string, type: 'PUSH' | 'POP' | 'REPLACE') => void
 }
 
 export const useUiStore = create<UiState>()((set) => {
@@ -75,6 +87,41 @@ export const useUiStore = create<UiState>()((set) => {
 
     mobileNavOpen: false,
     setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
+
+    navHistory: [],
+    navIndex: -1,
+    canGoBack: false,
+    canGoForward: false,
+    recordNavigation: (pathname, type) =>
+      set((state) => {
+        if (type === 'PUSH') {
+          const history = [...state.navHistory.slice(0, state.navIndex + 1), pathname]
+          return { navHistory: history, navIndex: history.length - 1, canGoBack: history.length > 1, canGoForward: false }
+        }
+        if (type === 'REPLACE') {
+          const history = [...state.navHistory]
+          const index = state.navIndex < 0 ? 0 : state.navIndex
+          history[index] = pathname
+          return { navHistory: history, navIndex: index, canGoBack: index > 0, canGoForward: index < history.length - 1 }
+        }
+        // POP : soit notre navigate(-1)/(1), soit un retour navigateur — on
+        // retrouve la position dans l'historique déjà connu plutôt que d'en
+        // déduire la direction, react-router ne l'expose pas.
+        const backIndex = state.navIndex - 1
+        const forwardIndex = state.navIndex + 1
+        if (backIndex >= 0 && state.navHistory[backIndex] === pathname) {
+          return { navIndex: backIndex, canGoBack: backIndex > 0, canGoForward: true }
+        }
+        if (forwardIndex < state.navHistory.length && state.navHistory[forwardIndex] === pathname) {
+          return {
+            navIndex: forwardIndex,
+            canGoBack: true,
+            canGoForward: forwardIndex < state.navHistory.length - 1,
+          }
+        }
+        // Position inconnue (premier montage) : nouveau point de départ.
+        return { navHistory: [pathname], navIndex: 0, canGoBack: false, canGoForward: false }
+      }),
   }
 })
 

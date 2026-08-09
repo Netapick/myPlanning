@@ -49,6 +49,10 @@ export const formatDuration = (minutes: number): string => {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
 }
 
+/** « +2h », « -1h30 » — variante signée, pour les soldes RH qui peuvent être négatifs. */
+export const formatSignedDuration = (minutes: number): string =>
+  `${minutes < 0 ? '-' : '+'}${formatDuration(Math.abs(minutes))}`
+
 /** « 8,5 h » — pour les totaux, où le décimal se compare plus vite. */
 export const formatHours = (minutes: number): string => {
   const hours = minutes / 60
