@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   IconCalendar,
+  IconClock,
   IconClose,
   IconDashboard,
   IconSettings,
@@ -21,6 +22,7 @@ const LINKS = [
   { to: '/', label: 'Tableau de bord', Icon: IconDashboard, end: true },
   { to: '/planning', label: 'Planning', Icon: IconCalendar, end: false },
   { to: '/personnel', label: 'Personnels', Icon: IconUsers, end: false },
+  { to: '/rh', label: 'RH', Icon: IconClock, end: false },
   { to: '/parametres', label: 'Paramètres', Icon: IconSettings, end: false },
 ]
 

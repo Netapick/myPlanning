@@ -3,6 +3,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { DashboardScreen } from '@/features/dashboard/DashboardScreen'
 import { PersonnelScreen } from '@/features/personnel/PersonnelScreen'
 import { PlanningScreen } from '@/features/planning/PlanningScreen'
+import { RhScreen } from '@/features/rh/RhScreen'
 import { SettingsScreen } from '@/features/settings/SettingsScreen'
 
 export const router = createBrowserRouter([
@@ -13,6 +14,7 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardScreen /> },
       { path: 'planning', element: <PlanningScreen /> },
       { path: 'personnel', element: <PersonnelScreen /> },
+      { path: 'rh', element: <RhScreen /> },
       { path: 'parametres', element: <SettingsScreen /> },
     ],
   },
