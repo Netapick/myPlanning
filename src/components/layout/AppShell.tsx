@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { IconAlert } from '@/components/ui/icons'
+import { type AvailableUpdate, checkForUpdate } from '@/lib/appUpdate'
+import { isTauri } from '@/lib/api'
 import { useDataStore } from '@/store/data'
 import { useUiStore } from '@/store/ui'
 import { SideNav } from './SideNav'
 import { SplashScreen } from './SplashScreen'
 import { TopBar } from './TopBar'
+import { UpdateBanner } from './UpdateBanner'
 
 /** Survit à un F5 (même session) mais pas à une fermeture/réouverture de fenêtre ni à un relancement de l'exécutable. */
 const SPLASH_KEY = 'myplanning.splashShown'
@@ -39,10 +42,19 @@ export function AppShell() {
     }
   })
   const [splashFloorDone, setSplashFloorDone] = useState(false)
+  const [availableUpdate, setAvailableUpdate] = useState<AvailableUpdate | null>(null)
 
   useEffect(() => {
     void load()
   }, [load])
+
+  // Check en tâche de fond, une fois par lancement — jamais bloquant pour le
+  // mode hors-ligne (checkForUpdate avale déjà toute erreur réseau).
+  // Absent en mode web : il n'y a pas de version installable à mettre à jour.
+  useEffect(() => {
+    if (!isTauri()) return
+    void checkForUpdate(__APP_VERSION__).then(setAvailableUpdate)
+  }, [])
 
   useEffect(() => {
     recordNavigation(location.pathname + location.search, navigationType)
@@ -61,6 +73,9 @@ export function AppShell() {
       <SideNav />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
+        {availableUpdate ? (
+          <UpdateBanner update={availableUpdate} onDismiss={() => setAvailableUpdate(null)} />
+        ) : null}
         {/* Seul point de défilement pour les écrans qui ne gèrent pas leur
             propre zone défilante (Tableau de bord, Personnels, Paramètres).
             Le Planning gère la sienne en interne (voir son `Panel`) : dans ce

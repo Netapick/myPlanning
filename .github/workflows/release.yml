@@ -1,0 +1,38 @@
+name: Release
+
+# Sur un tag `vX.Y.Z` : build l'installateur Windows et le publie comme
+# GitHub Release — c'est cette Release que l'app va vérifier au démarrage
+# (voir src/lib/appUpdate.ts). Le tag doit correspondre à la version dans
+# package.json / src-tauri/tauri.conf.json (pas de bump automatique ici).
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'myPlanning ${{ github.ref_name }}'
+          releaseBody: 'Voir les changements de cette version.'
+          releaseDraft: false
+          prerelease: false
