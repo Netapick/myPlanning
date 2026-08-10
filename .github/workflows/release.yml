@@ -4,6 +4,12 @@ name: Release
 # GitHub Release — c'est cette Release que l'app va vérifier au démarrage
 # (voir src/lib/appUpdate.ts). Le tag doit correspondre à la version dans
 # package.json / src-tauri/tauri.conf.json (pas de bump automatique ici).
+#
+# Un tag contenant `-demo` (ex. `v1.0.0-demo`) publie en pré-release GitHub
+# au lieu d'une release normale : elle reste téléchargeable depuis la page
+# Releases mais n'apparaît jamais comme « latest » via l'API GitHub, donc ne
+# déclenche jamais la bannière de mise à jour chez les utilisateurs déjà
+# installés (voir `checkForUpdate` dans `src/lib/appUpdate.ts`).
 on:
   push:
     tags:
@@ -27,12 +33,24 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Détecter un tag de démo
+        id: demo
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_name }}" == *-demo* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'myPlanning ${{ github.ref_name }}'
+          releaseName: >-
+            ${{ steps.demo.outputs.prerelease == 'true' && format('myPlanning {0} (démo)', github.ref_name)
+            || format('myPlanning {0}', github.ref_name) }}
           releaseBody: 'Voir les changements de cette version.'
           releaseDraft: false
-          prerelease: false
+          prerelease: ${{ steps.demo.outputs.prerelease == 'true' }}
