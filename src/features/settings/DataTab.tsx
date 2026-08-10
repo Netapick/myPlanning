@@ -21,6 +21,7 @@ export function DataTab() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState('')
+  const [exportMessage, setExportMessage] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [pendingImport, setPendingImport] = useState<unknown>(null)
 
@@ -30,10 +31,12 @@ export function DataTab() {
     const url = URL.createObjectURL(blob)
     const link = window.document.createElement('a')
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
+    const name = `myplanning-${stamp}.json`
     link.href = url
-    link.download = `myplanning-${stamp}.json`
+    link.download = name
     link.click()
     URL.revokeObjectURL(url)
+    setExportMessage(`« ${name} » téléchargé dans le dossier de téléchargements par défaut du navigateur.`)
   }
 
   const onFileChosen = async (file: File) => {
@@ -115,6 +118,9 @@ export function DataTab() {
             }}
           />
         </div>
+        {exportMessage ? (
+          <p className="border-t border-hairline px-5 py-3 text-body-sm text-good-text">{exportMessage}</p>
+        ) : null}
         {importError ? (
           <p className="border-t border-hairline px-5 py-3 text-body-sm text-critical-text">
             {importError}
