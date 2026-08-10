@@ -67,6 +67,22 @@ export const fromIsoWeekValue = (value: string): Date | null => {
   return startOfISOWeek(setISOWeek(new Date(year, 0, 4), week))
 }
 
+/** « 2026-10 » — valeur d'un `<input type="month">`. */
+export const isoMonthValue = (date: Date) => format(date, 'yyyy-MM')
+
+/** 1er jour du mois désigné par une valeur `<input type="month">`, ou `null` si invalide. */
+export const fromIsoMonthValue = (value: string): Date | null => {
+  const match = /^(\d{4})-(\d{2})$/.exec(value)
+  if (!match) return null
+  const [, yearStr, monthStr] = match
+  const month = Number(monthStr)
+  if (month < 1 || month > 12) return null
+  return new Date(Number(yearStr), month - 1, 1)
+}
+
+/** « Octobre 2026 » — étiquette du mois affiché. */
+export const monthLabel = (date: Date) => format(date, 'MMMM yyyy', { locale: fr })
+
 export const isToday = (date: Date) => toIso(date) === toIso(new Date())
 
 /** Nombre de jours (entier, signé) entre aujourd'hui et une date ISO. */

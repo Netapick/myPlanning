@@ -2,7 +2,7 @@ import { subMonths } from 'date-fns'
 import { currentYearPeriod, daysCoveredInPeriod, type Period } from './balances'
 import { publicHolidaysForYear } from './holidays'
 import { colorVar } from './palette'
-import { workedMinutes } from './time'
+import { spanMinutes } from './time'
 import { EVENT_TYPE_COLOR_INDEX, EVENT_TYPE_LABELS } from './types'
 import type { Employee, Event, EventType, Shift } from './types'
 import { startOfIsoWeek, toIso, weekNumber } from './week'
@@ -35,7 +35,7 @@ export const weeklyHoursForEmployee = (
     const weekStart = toIso(startOfIsoWeek(new Date(`${shift.date}T12:00:00`)))
     totals.set(
       weekStart,
-      (totals.get(weekStart) ?? 0) + workedMinutes(shift.start, shift.end, shift.breakMinutes),
+      (totals.get(weekStart) ?? 0) + spanMinutes(shift.start, shift.end),
     )
   }
 

@@ -83,8 +83,6 @@ export interface ShiftTemplate {
   /** « HH:mm ». Si `end` <= `start`, la tranche passe minuit. */
   start: string
   end: string
-  /** Pause non travaillée, déduite de la durée comptabilisée. */
-  breakMinutes: number
   colorIndex: number
   archived: boolean
 }
@@ -105,21 +103,28 @@ export interface Shift {
   templateId: Id | null
   start: string
   end: string
-  breakMinutes: number
   /** Nom affiché ; repris du modèle à la création, modifiable ensuite. */
   label: string
   colorIndex: number
   note?: string
 }
 
-/** Type d'un événement — ce qui n'est pas du travail planifié. */
+/**
+ * Type d'un événement — ce qui n'est pas du travail planifié.
+ *
+ * Pas de type « jour férié travaillé » : le crédit d'heures sup. correspondant
+ * est détecté automatiquement dans `lib/balances.ts` en croisant les `Shift`
+ * posés avec le calendrier des jours fériés (`lib/holidays.ts`) — aucun
+ * événement à créer à la main pour ça.
+ */
 export type EventType =
   | 'conges'
   | 'maladie'
   | 'maternite'
   | 'formation'
   | 'repos'
-  | 'ferie'
+  | 'recup_ferie'
+  | 'recup_hs'
   | 'autre'
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
@@ -128,7 +133,8 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   maternite: 'Congé maternité/paternité',
   formation: 'Formation',
   repos: 'Repos',
-  ferie: 'Récupération jour férié',
+  recup_ferie: 'Récupération jour férié',
+  recup_hs: 'Récupération heures sup.',
   autre: 'Autre',
 }
 
@@ -139,18 +145,19 @@ export const EVENT_TYPE_TONE: Record<EventType, 'neutral' | 'serious' | 'warning
   maternite: 'neutral',
   formation: 'warning',
   repos: 'neutral',
-  ferie: 'neutral',
+  recup_ferie: 'neutral',
+  recup_hs: 'neutral',
   autre: 'neutral',
 }
 
 /**
  * Couleur fixe par type d'événement dans le planning — index dans la palette
  * catégorielle (voir lib/palette.ts), choisi pour rester net et reconnaissable
- * d'un coup d'œil : bleu = congés, rouge = maladie, violet = maternité,
- * jaune = formation, aqua = repos, vert = récupération jour férié. « Autre »
- * n'a pas d'index : il retombe sur un gris neutre (voir EventBanner),
- * volontairement hors palette catégorielle puisqu'il ne représente aucune
- * catégorie précise.
+ * d'un coup d'œil : bleu = congés, rouge = maladie, violet = maternité, jaune
+ * = formation, aqua = repos, vert = récupération jour férié (débit), orange =
+ * récupération heures sup. (débit). « Autre » n'a pas d'index : il retombe
+ * sur un gris neutre (voir EventBanner), volontairement hors palette
+ * catégorielle puisqu'il ne représente aucune catégorie précise.
  */
 export const EVENT_TYPE_COLOR_INDEX: Record<Exclude<EventType, 'autre'>, number> = {
   conges: 1,
@@ -158,7 +165,8 @@ export const EVENT_TYPE_COLOR_INDEX: Record<Exclude<EventType, 'autre'>, number>
   maternite: 7,
   formation: 4,
   repos: 3,
-  ferie: 6,
+  recup_ferie: 6,
+  recup_hs: 2,
 }
 
 /**
@@ -175,6 +183,13 @@ export interface Event {
   /** Date ISO « AAAA-MM-JJ » inclusive — peut être égale à `startDate`. */
   endDate: string
   note?: string
+  /**
+   * « HH:mm » — plage horaire exacte, significative uniquement pour
+   * `recup_hs` (débit calculé sur cette plage plutôt qu'une journée
+   * standard). `startDate` et `endDate` sont alors toujours égales.
+   */
+  start?: string
+  end?: string
 }
 
 export interface NotificationSettings {
@@ -207,3 +222,7 @@ export const fullName = (employee: Employee) => `${employee.firstName} ${employe
 
 export const initials = (employee: Employee) =>
   `${employee.firstName.charAt(0)}${employee.lastName.charAt(0)}`.toUpperCase()
+
+/** Ordre alphabétique des listes de personnel — nom de famille d'abord, prénom en départage. */
+export const compareEmployeeNames = (a: Employee, b: Employee): number =>
+  a.lastName.localeCompare(b.lastName, 'fr') || a.firstName.localeCompare(b.firstName, 'fr')

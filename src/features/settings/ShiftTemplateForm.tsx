@@ -11,7 +11,6 @@ interface FormState {
   name: string
   start: string
   end: string
-  breakMinutes: string
   colorIndex: number
 }
 
@@ -19,7 +18,6 @@ const toForm = (template: ShiftTemplate | null, defaultColor: number): FormState
   name: template?.name ?? '',
   start: template?.start ?? '09:00',
   end: template?.end ?? '17:00',
-  breakMinutes: String(template?.breakMinutes ?? 30),
   colorIndex: template?.colorIndex ?? defaultColor,
 })
 
@@ -30,8 +28,6 @@ const validate = (form: FormState): Errors => {
   if (!form.name.trim()) errors.name = 'Nom obligatoire.'
   if (!isValidTime(form.start)) errors.start = 'Heure invalide.'
   if (!isValidTime(form.end)) errors.end = 'Heure invalide.'
-  const brk = Number(form.breakMinutes)
-  if (!Number.isFinite(brk) || brk < 0 || brk > 240) errors.breakMinutes = 'Entre 0 et 240 minutes.'
   return errors
 }
 
@@ -72,7 +68,6 @@ export function ShiftTemplateForm({
       name: form.name.trim(),
       start: form.start,
       end: form.end,
-      breakMinutes: Number(form.breakMinutes),
       colorIndex: form.colorIndex,
       archived: template?.archived ?? false,
     })
@@ -118,17 +113,6 @@ export function ShiftTemplateForm({
             onChange={(event) => set('end', event.target.value)}
           />
         </div>
-        <TextField
-          label="Pause (minutes)"
-          type="number"
-          min={0}
-          max={240}
-          step={5}
-          value={form.breakMinutes}
-          error={errors.breakMinutes}
-          onChange={(event) => set('breakMinutes', event.target.value)}
-        />
-
         <div>
           <p className="mb-1.5 text-label tracking-wide text-muted uppercase">Couleur</p>
           <div className="flex flex-wrap gap-2">

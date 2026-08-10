@@ -5,13 +5,13 @@ import { EmptyState, Panel, PanelHeader } from '@/components/ui/Panel'
 import { IconEdit, IconPlus, IconTrash, IconUsers } from '@/components/ui/icons'
 import { colorVar, nextColorIndex } from '@/lib/palette'
 import type { Team } from '@/lib/types'
-import { useDataStore } from '@/store/data'
+import { EMPTY_EMPLOYEES, EMPTY_TEAMS, useDataStore } from '@/store/data'
 import { TeamForm } from './TeamForm'
 
 /** Onglet Paramètres > Équipes : le regroupement utilisé par le filtre du planning. */
 export function TeamsTab() {
-  const teams = useDataStore((state) => state.document?.teams ?? [])
-  const employees = useDataStore((state) => state.document?.employees ?? [])
+  const teams = useDataStore((state) => state.document?.teams ?? EMPTY_TEAMS)
+  const employees = useDataStore((state) => state.document?.employees ?? EMPTY_EMPLOYEES)
   const upsertTeam = useDataStore((state) => state.upsertTeam)
   const removeTeam = useDataStore((state) => state.removeTeam)
 

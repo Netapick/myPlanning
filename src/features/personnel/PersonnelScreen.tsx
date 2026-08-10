@@ -1,19 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
 import { Avatar, FilterChip, StatusBadge } from '@/components/ui/Badge'
 import { Button, IconButton } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { CalendarOff, IconEdit, IconPlus, IconTrash, IconUsers } from '@/components/ui/icons'
+import { IconEdit, IconEvent, IconTrash, IconUserPlus, IconUsers } from '@/components/ui/icons'
 import { derivedStatus } from '@/lib/events'
 import { formatHours } from '@/lib/time'
 import type { Employee, Event } from '@/lib/types'
-import { fullName } from '@/lib/types'
+import { compareEmployeeNames, fullName } from '@/lib/types'
 import { toIso } from '@/lib/week'
-import { useDataStore } from '@/store/data'
+import { EMPTY_EMPLOYEES, EMPTY_EVENTS, EMPTY_SHIFTS, EMPTY_TEAMS, useDataStore } from '@/store/data'
 import { useUiStore } from '@/store/ui'
-import { EmployeeForm } from './EmployeeForm'
 import { EventForm } from './EventForm'
 
 type FilterKey = 'all' | 'actif' | 'conges' | 'maladie'
@@ -25,41 +23,22 @@ const PAGE_SIZE = 8
  * panneau d'ajout/édition, suppression confirmée.
  */
 export function PersonnelScreen() {
-  const employees = useDataStore((state) => state.document?.employees ?? [])
-  const teams = useDataStore((state) => state.document?.teams ?? [])
-  const shifts = useDataStore((state) => state.document?.shifts ?? [])
-  const events = useDataStore((state) => state.document?.events ?? [])
+  const employees = useDataStore((state) => state.document?.employees ?? EMPTY_EMPLOYEES)
+  const teams = useDataStore((state) => state.document?.teams ?? EMPTY_TEAMS)
+  const shifts = useDataStore((state) => state.document?.shifts ?? EMPTY_SHIFTS)
+  const events = useDataStore((state) => state.document?.events ?? EMPTY_EVENTS)
   const today = useMemo(() => toIso(new Date()), [])
-  const upsertEmployee = useDataStore((state) => state.upsertEmployee)
   const removeEmployee = useDataStore((state) => state.removeEmployee)
   const upsertEvent = useDataStore((state) => state.upsertEvent)
   const search = useUiStore((state) => state.search)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const openEmployeeProfile = useUiStore((state) => state.openEmployeeProfile)
+  const openEmployeeCreate = useUiStore((state) => state.openEmployeeCreate)
 
   const [filter, setFilter] = useState<FilterKey>('all')
   const [page, setPage] = useState(1)
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<Employee | null>(null)
   const [toDelete, setToDelete] = useState<Employee | null>(null)
   const [eventFormOpen, setEventFormOpen] = useState(false)
   const [eventDefaultEmployeeId, setEventDefaultEmployeeId] = useState<string | undefined>()
-
-  // Ouvre directement la fiche visée quand on arrive depuis un lien externe
-  // (ex. clic sur un nom dans le planning) : /personnel?employee=<id>.
-  useEffect(() => {
-    const targetId = searchParams.get('employee')
-    if (!targetId) return
-    const target = employees.find((employee) => employee.id === targetId)
-    if (target) {
-      setEditing(target)
-      setFormOpen(true)
-    }
-    setSearchParams((params) => {
-      params.delete('employee')
-      return params
-    }, { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
 
   const teamById = useMemo(() => new Map(teams.map((team) => [team.id, team])), [teams])
 
@@ -71,7 +50,7 @@ export function PersonnelScreen() {
       const [sh = 0, sm = 0] = shift.start.split(':').map(Number)
       const [eh = 0, em = 0] = shift.end.split(':').map(Number)
       const span = (eh * 60 + em - (sh * 60 + sm) + 1440) % 1440 || 1440
-      totals.set(shift.employeeId, (totals.get(shift.employeeId) ?? 0) + span - shift.breakMinutes)
+      totals.set(shift.employeeId, (totals.get(shift.employeeId) ?? 0) + span)
     }
     return totals
   }, [shifts])
@@ -97,21 +76,13 @@ export function PersonnelScreen() {
           `${fullName(employee)} ${employee.role} ${employee.department}`.toLowerCase()
         return haystack.includes(query)
       })
-      .sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr'))
+      .sort(compareEmployeeNames)
   }, [employees, filter, search])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
-  const openCreate = () => {
-    setEditing(null)
-    setFormOpen(true)
-  }
-  const openEdit = (employee: Employee) => {
-    setEditing(employee)
-    setFormOpen(true)
-  }
   const openEventCreate = (employeeId?: string) => {
     setEventDefaultEmployeeId(employeeId)
     setEventFormOpen(true)
@@ -133,13 +104,13 @@ export function PersonnelScreen() {
           <>
             <Button
               variant="secondary"
-              icon={<CalendarOff size={18} />}
+              icon={<IconEvent size={18} />}
               onClick={() => openEventCreate()}
             >
               Événement
             </Button>
-            <Button icon={<IconPlus size={18} />} onClick={openCreate}>
-              Ajouter un membre
+            <Button icon={<IconUserPlus size={18} />} onClick={openEmployeeCreate}>
+              Ajouter un personnel
             </Button>
           </>
         }
@@ -167,8 +138,12 @@ export function PersonnelScreen() {
           <EmptyState
             icon={<IconUsers size={28} />}
             title="Aucune personne trouvée"
-            description="Ajuste la recherche ou le filtre, ou ajoute un nouveau membre."
-            action={<Button onClick={openCreate}>Ajouter un membre</Button>}
+            description="Ajuste la recherche ou le filtre, ou ajoute un nouveau personnel."
+            action={
+              <Button icon={<IconUserPlus size={18} />} onClick={openEmployeeCreate}>
+                Ajouter un personnel
+              </Button>
+            }
           />
         ) : (
           <>
@@ -218,9 +193,9 @@ export function PersonnelScreen() {
                             label="Ajouter un événement"
                             onClick={() => openEventCreate(employee.id)}
                           >
-                            <CalendarOff size={16} />
+                            <IconEvent size={16} />
                           </IconButton>
-                          <IconButton label="Modifier" onClick={() => openEdit(employee)}>
+                          <IconButton label="Modifier" onClick={() => openEmployeeProfile(employee.id)}>
                             <IconEdit size={16} />
                           </IconButton>
                           <IconButton
@@ -267,20 +242,12 @@ export function PersonnelScreen() {
         )}
       </Panel>
 
-      <EmployeeForm
-        open={formOpen}
-        employee={editing}
-        teams={teams}
-        events={events}
-        shifts={shifts}
-        onClose={() => setFormOpen(false)}
-        onSave={upsertEmployee}
-      />
-
       <EventForm
         open={eventFormOpen}
         event={null}
-        employees={employees.filter((employee) => !employee.archived)}
+        employees={employees
+          .filter((employee) => !employee.archived)
+          .sort(compareEmployeeNames)}
         defaultEmployeeId={eventDefaultEmployeeId}
         onClose={() => setEventFormOpen(false)}
         onSave={(event: Event) => upsertEvent(event)}

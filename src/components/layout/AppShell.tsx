@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { IconAlert } from '@/components/ui/icons'
+import { EmployeeForm } from '@/features/personnel/EmployeeForm'
 import { type AvailableUpdate, checkForUpdate } from '@/lib/appUpdate'
 import { isTauri } from '@/lib/api'
-import { useDataStore } from '@/store/data'
+import { EMPTY_EMPLOYEES, EMPTY_EVENTS, EMPTY_SHIFTS, EMPTY_TEAMS, useDataStore } from '@/store/data'
 import { useUiStore } from '@/store/ui'
+import { DevBanner } from './DevBanner'
 import { SideNav } from './SideNav'
 import { SplashScreen } from './SplashScreen'
 import { TopBar } from './TopBar'
@@ -29,6 +31,13 @@ export function AppShell() {
   const location = useLocation()
   const navigationType = useNavigationType()
   const recordNavigation = useUiStore((state) => state.recordNavigation)
+  const employeeProfile = useUiStore((state) => state.employeeProfile)
+  const closeEmployeeProfile = useUiStore((state) => state.closeEmployeeProfile)
+  const employees = useDataStore((state) => state.document?.employees ?? EMPTY_EMPLOYEES)
+  const teams = useDataStore((state) => state.document?.teams ?? EMPTY_TEAMS)
+  const events = useDataStore((state) => state.document?.events ?? EMPTY_EVENTS)
+  const shifts = useDataStore((state) => state.document?.shifts ?? EMPTY_SHIFTS)
+  const upsertEmployee = useDataStore((state) => state.upsertEmployee)
 
   // Lazy initializer : posé une seule fois, de façon synchrone, au tout
   // premier rendu — pas de risque de double-affichage du splash en StrictMode.
@@ -73,6 +82,7 @@ export function AppShell() {
       <SideNav />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
+        <DevBanner />
         {availableUpdate ? (
           <UpdateBanner update={availableUpdate} onDismiss={() => setAvailableUpdate(null)} />
         ) : null}
@@ -94,6 +104,23 @@ export function AppShell() {
         </main>
       </div>
       {showSplash ? <SplashScreen /> : null}
+
+      {/* Instance unique, montée ici plutôt que dans chaque écran : consulter
+          une fiche depuis Planning ou Personnels ne doit jamais changer
+          l'écran actif dans la nav — juste ouvrir cet overlay par-dessus. */}
+      <EmployeeForm
+        open={employeeProfile !== null}
+        employee={
+          employeeProfile?.mode === 'edit'
+            ? (employees.find((employee) => employee.id === employeeProfile.id) ?? null)
+            : null
+        }
+        teams={teams}
+        events={events}
+        shifts={shifts}
+        onClose={closeEmployeeProfile}
+        onSave={upsertEmployee}
+      />
     </div>
   )
 }

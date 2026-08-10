@@ -1,6 +1,7 @@
 import { differenceInCalendarDays } from 'date-fns'
 import { dateRangesOverlap } from './events'
-import { workedMinutes } from './time'
+import { isPublicHoliday } from './holidays'
+import { spanMinutes } from './time'
 import { fromIso, startOfIsoWeek, toIso } from './week'
 import type { Employee, Event, Shift } from './types'
 
@@ -33,12 +34,36 @@ export const daysCoveredInPeriod = (event: Event, period: Period): number => {
 }
 
 /**
- * Équivalent journalier du quota contractuel — même convention que le taux
- * d'occupation du tableau de bord (`useDashboardData.ts`), sur une base de
- * 5 jours pour rester simple : une récupération de jour férié « vaut » une
- * journée-type de la personne.
+ * Équivalent journalier du quota contractuel — une « journée-type » de la
+ * personne, utilisée pour les récupérations comptées en jours entiers
+ * (`recup_ferie`) plutôt qu'en plage horaire précise (`recup_hs`).
  */
 const dailyContractMinutes = (employee: Employee): number => (employee.contract.weeklyHours * 60) / 5
+
+/**
+ * Minutes exactes couvertes par un événement `recup_hs` : sa plage horaire
+ * réelle (`start`/`end`), ou repli sur la moyenne contractuelle si elle n'a
+ * pas été saisie (défensif — le formulaire l'exige normalement pour ce type).
+ */
+const eventRecoveryMinutes = (event: Event, employee: Employee): number =>
+  event.start && event.end ? spanMinutes(event.start, event.end) : dailyContractMinutes(employee)
+
+/**
+ * Crédit automatique pour les jours fériés travaillés : croise les `Shift`
+ * posés sur `period` avec le calendrier des jours fériés (`lib/holidays.ts`)
+ * — aucun événement à créer à la main, le crédit apparaît dès qu'un créneau
+ * est planifié un jour férié détecté.
+ */
+const holidayShiftCreditMinutes = (employee: Employee, shifts: Shift[], period: Period): number => {
+  let total = 0
+  for (const shift of shifts) {
+    if (shift.employeeId !== employee.id) continue
+    if (shift.date < period.start || shift.date > period.end) continue
+    if (!isPublicHoliday(shift.date)) continue
+    total += spanMinutes(shift.start, shift.end)
+  }
+  return total
+}
 
 /**
  * Cumul automatique des heures sup. : pour chaque semaine ISO travaillée sur
@@ -60,7 +85,7 @@ const accruedOvertimeMinutes = (employee: Employee, shifts: Shift[], period: Per
     const weekStart = toIso(startOfIsoWeek(fromIso(shift.date)))
     minutesByWeek.set(
       weekStart,
-      (minutesByWeek.get(weekStart) ?? 0) + workedMinutes(shift.start, shift.end, shift.breakMinutes),
+      (minutesByWeek.get(weekStart) ?? 0) + spanMinutes(shift.start, shift.end),
     )
   }
 
@@ -79,7 +104,12 @@ export interface EmployeeBalances {
   overtimeBalanceMinutes: number
   /** Cumulé automatiquement depuis les semaines en dépassement (voir `accruedOvertimeMinutes`). */
   overtimeAccruedMinutes: number
+  /** Crédit automatique pour les jours fériés travaillés (voir `holidayShiftCreditMinutes`). */
+  overtimeHolidayCreditMinutes: number
+  /** Temps de récupération heures sup. déjà pris (événements `recup_hs`). */
   overtimeRecoveredMinutes: number
+  /** Jours de récupération de jour férié déjà pris (événements `recup_ferie`). */
+  holidayRecoveryMinutes: number
   overtimeRemainingMinutes: number
   restDaysTaken: number
 }
@@ -92,15 +122,26 @@ export const employeeBalances = (
   period: Period = currentYearPeriod(),
 ): EmployeeBalances => {
   const employeeEvents = events.filter((event) => event.employeeId === employee.id)
+  const inPeriod = (event: Event) => event.startDate >= period.start && event.startDate <= period.end
 
   const leaveTaken = employeeEvents
     .filter((event) => event.type === 'conges')
     .reduce((total, event) => total + daysCoveredInPeriod(event, period), 0)
 
   const overtimeAccruedMinutes = accruedOvertimeMinutes(employee, shifts, period)
+  const overtimeHolidayCreditMinutes = holidayShiftCreditMinutes(employee, shifts, period)
 
+  // Temps de récupération heures sup. réellement pris (plage horaire exacte).
   const overtimeRecoveredMinutes = employeeEvents
-    .filter((event) => event.type === 'ferie')
+    .filter((event) => event.type === 'recup_hs' && inPeriod(event))
+    .reduce((total, event) => total + eventRecoveryMinutes(event, employee), 0)
+
+  // Jour(s) de récupération de jour férié pris — décompte en journées-type
+  // (pas en plage horaire précise, voir `recup_hs` pour ce cas), répété pour
+  // chaque jour couvert par l'événement. La pause compte comme du temps
+  // travaillé, donc n'est jamais déduite ici.
+  const holidayRecoveryMinutes = employeeEvents
+    .filter((event) => event.type === 'recup_ferie')
     .reduce((total, event) => total + daysCoveredInPeriod(event, period) * dailyContractMinutes(employee), 0)
 
   const restDaysTaken = employeeEvents.filter(
@@ -113,8 +154,15 @@ export const employeeBalances = (
     leaveRemaining: employee.leaveBalance.accrued - leaveTaken,
     overtimeBalanceMinutes: employee.overtimeBalanceMinutes,
     overtimeAccruedMinutes,
+    overtimeHolidayCreditMinutes,
     overtimeRecoveredMinutes,
-    overtimeRemainingMinutes: employee.overtimeBalanceMinutes + overtimeAccruedMinutes - overtimeRecoveredMinutes,
+    holidayRecoveryMinutes,
+    overtimeRemainingMinutes:
+      employee.overtimeBalanceMinutes +
+      overtimeAccruedMinutes +
+      overtimeHolidayCreditMinutes -
+      overtimeRecoveredMinutes -
+      holidayRecoveryMinutes,
     restDaysTaken,
   }
 }

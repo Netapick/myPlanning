@@ -9,7 +9,11 @@
       "role": "Manager d'équipe",
       "department": "Opérations",
       "teamId": "team-a",
-      "contract": { "type": "CDI", "weeklyHours": 39, "startDate": "2021-03-01" },
+      "contract": {
+        "type": "CDI",
+        "weeklyHours": 39,
+        "startDate": "2021-03-01"
+      },
       "status": "actif",
       "archived": false
     },
@@ -21,7 +25,11 @@
       "role": "Technicien senior",
       "department": "Maintenance",
       "teamId": "team-a",
-      "contract": { "type": "CDI", "weeklyHours": 35, "startDate": "2019-09-16" },
+      "contract": {
+        "type": "CDI",
+        "weeklyHours": 35,
+        "startDate": "2019-09-16"
+      },
       "status": "maladie",
       "archived": false
     },
@@ -33,7 +41,11 @@
       "role": "Agent d'accueil",
       "department": "Service client",
       "teamId": "team-b",
-      "contract": { "type": "Temps partiel", "weeklyHours": 24, "startDate": "2023-01-09" },
+      "contract": {
+        "type": "Temps partiel",
+        "weeklyHours": 24,
+        "startDate": "2023-01-09"
+      },
       "status": "actif",
       "archived": false
     },
@@ -62,7 +74,11 @@
       "role": "Infirmière",
       "department": "Soins",
       "teamId": "team-a",
-      "contract": { "type": "CDI", "weeklyHours": 35, "startDate": "2020-06-02" },
+      "contract": {
+        "type": "CDI",
+        "weeklyHours": 35,
+        "startDate": "2020-06-02"
+      },
       "status": "actif",
       "archived": false
     },
@@ -74,14 +90,26 @@
       "role": "Aide-soignant",
       "department": "Soins",
       "teamId": "team-b",
-      "contract": { "type": "CDI", "weeklyHours": 35, "startDate": "2022-11-14" },
+      "contract": {
+        "type": "CDI",
+        "weeklyHours": 35,
+        "startDate": "2022-11-14"
+      },
       "status": "actif",
       "archived": false
     }
   ],
   "teams": [
-    { "id": "team-a", "name": "Équipe A", "colorIndex": 1 },
-    { "id": "team-b", "name": "Équipe B", "colorIndex": 3 }
+    {
+      "id": "team-a",
+      "name": "Équipe A",
+      "colorIndex": 1
+    },
+    {
+      "id": "team-b",
+      "name": "Équipe B",
+      "colorIndex": 3
+    }
   ],
   "shiftTemplates": [
     {
@@ -89,7 +117,6 @@
       "name": "Matin",
       "start": "07:00",
       "end": "15:00",
-      "breakMinutes": 30,
       "colorIndex": 3,
       "archived": false
     },
@@ -98,7 +125,6 @@
       "name": "Soir",
       "start": "14:00",
       "end": "22:00",
-      "breakMinutes": 30,
       "colorIndex": 4,
       "archived": false
     },
@@ -107,7 +133,6 @@
       "name": "Nuit",
       "start": "22:00",
       "end": "06:00",
-      "breakMinutes": 0,
       "colorIndex": 1,
       "archived": false
     },
@@ -116,7 +141,6 @@
       "name": "Journée continue",
       "start": "09:00",
       "end": "17:00",
-      "breakMinutes": 60,
       "colorIndex": 6,
       "archived": false
     }
@@ -129,7 +153,6 @@
       "templateId": "tpl-matin",
       "start": "07:00",
       "end": "15:00",
-      "breakMinutes": 30,
       "label": "Matin",
       "colorIndex": 3
     },
@@ -140,7 +163,6 @@
       "templateId": "tpl-matin",
       "start": "07:00",
       "end": "15:00",
-      "breakMinutes": 30,
       "label": "Matin",
       "colorIndex": 3
     },
@@ -151,7 +173,6 @@
       "templateId": "tpl-soir",
       "start": "14:00",
       "end": "22:00",
-      "breakMinutes": 30,
       "label": "Soir",
       "colorIndex": 4,
       "note": "Formation nouvelle recrue"
@@ -163,7 +184,6 @@
       "templateId": "tpl-nuit",
       "start": "22:00",
       "end": "06:00",
-      "breakMinutes": 0,
       "label": "Nuit",
       "colorIndex": 1
     },
@@ -174,7 +194,6 @@
       "templateId": "tpl-nuit",
       "start": "22:00",
       "end": "06:00",
-      "breakMinutes": 0,
       "label": "Nuit",
       "colorIndex": 1
     },
@@ -185,7 +204,6 @@
       "templateId": "tpl-journee",
       "start": "09:00",
       "end": "17:00",
-      "breakMinutes": 60,
       "label": "Journée continue",
       "colorIndex": 6
     },
@@ -196,7 +214,6 @@
       "templateId": "tpl-journee",
       "start": "09:00",
       "end": "17:00",
-      "breakMinutes": 60,
       "label": "Journée continue",
       "colorIndex": 6
     },
@@ -207,7 +224,6 @@
       "templateId": "tpl-journee",
       "start": "09:00",
       "end": "17:00",
-      "breakMinutes": 60,
       "label": "Journée continue",
       "colorIndex": 6
     },
@@ -218,7 +234,6 @@
       "templateId": "tpl-journee",
       "start": "09:00",
       "end": "17:00",
-      "breakMinutes": 60,
       "label": "Journée continue",
       "colorIndex": 6
     },
@@ -229,7 +244,6 @@
       "templateId": "tpl-journee",
       "start": "09:00",
       "end": "17:00",
-      "breakMinutes": 60,
       "label": "Journée continue",
       "colorIndex": 6
     },
@@ -240,7 +254,6 @@
       "templateId": "tpl-matin",
       "start": "08:00",
       "end": "13:00",
-      "breakMinutes": 0,
       "label": "Accueil matin",
       "colorIndex": 3
     },
@@ -251,7 +264,6 @@
       "templateId": "tpl-matin",
       "start": "08:00",
       "end": "13:00",
-      "breakMinutes": 0,
       "label": "Accueil matin",
       "colorIndex": 3
     },
@@ -262,7 +274,6 @@
       "templateId": "tpl-matin",
       "start": "08:00",
       "end": "13:00",
-      "breakMinutes": 0,
       "label": "Accueil matin",
       "colorIndex": 3
     },
@@ -273,14 +284,19 @@
       "templateId": "tpl-soir",
       "start": "14:00",
       "end": "22:00",
-      "breakMinutes": 30,
       "label": "Soir",
       "colorIndex": 4
     }
   ],
   "events": [],
   "settings": {
-    "openingDays": [1, 2, 3, 4, 5],
+    "openingDays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "notifications": {
       "contractNoticeDays": 30,
       "hoursTolerance": 4,

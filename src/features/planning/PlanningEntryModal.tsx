@@ -4,7 +4,7 @@ import { SelectField, TextField, TimeField } from '@/components/ui/Field'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { CalendarOff } from '@/components/ui/icons'
 import { publicHolidayName } from '@/lib/holidays'
-import { formatDuration, isValidTime, workedMinutes } from '@/lib/time'
+import { formatDuration, isValidTime, spanMinutes } from '@/lib/time'
 import type { Employee, Event, EventType, Shift, ShiftTemplate } from '@/lib/types'
 import { EVENT_TYPE_LABELS, fullName } from '@/lib/types'
 import { longDateLabel, toIso } from '@/lib/week'
@@ -16,7 +16,6 @@ interface ShiftFormState {
   templateId: string
   start: string
   end: string
-  breakMinutes: string
   label: string
   colorIndex: number
   note: string
@@ -26,15 +25,20 @@ interface EventFormState {
   type: EventType
   startDate: string
   endDate: string
+  start: string
+  end: string
   note: string
 }
 
+/** Types d'événement à heures précises — un seul jour, une plage horaire. */
+const TIMED_TYPES: EventType[] = ['recup_hs']
+const isTimedType = (type: EventType): boolean => TIMED_TYPES.includes(type)
+
 const fromTemplate = (
   template: ShiftTemplate,
-): Pick<ShiftFormState, 'start' | 'end' | 'breakMinutes' | 'label' | 'colorIndex'> => ({
+): Pick<ShiftFormState, 'start' | 'end' | 'label' | 'colorIndex'> => ({
   start: template.start,
   end: template.end,
-  breakMinutes: String(template.breakMinutes),
   label: template.name,
   colorIndex: template.colorIndex,
 })
@@ -45,7 +49,6 @@ const emptyShiftForm = (templates: ShiftTemplate[]): ShiftFormState => {
     templateId: first?.id ?? '',
     start: first?.start ?? '09:00',
     end: first?.end ?? '17:00',
-    breakMinutes: String(first?.breakMinutes ?? 0),
     label: first?.name ?? '',
     colorIndex: first?.colorIndex ?? 1,
     note: '',
@@ -56,7 +59,6 @@ const shiftToForm = (shift: Shift): ShiftFormState => ({
   templateId: shift.templateId ?? '',
   start: shift.start,
   end: shift.end,
-  breakMinutes: String(shift.breakMinutes),
   label: shift.label,
   colorIndex: shift.colorIndex,
   note: shift.note ?? '',
@@ -66,6 +68,8 @@ const emptyEventForm = (date: string): EventFormState => ({
   type: 'conges',
   startDate: date,
   endDate: date,
+  start: '',
+  end: '',
   note: '',
 })
 
@@ -73,28 +77,36 @@ const eventToForm = (event: Event): EventFormState => ({
   type: event.type,
   startDate: event.startDate,
   endDate: event.endDate,
+  start: event.start ?? '',
+  end: event.end ?? '',
   note: event.note ?? '',
 })
 
-type ShiftErrors = Partial<Record<'label' | 'start' | 'end' | 'breakMinutes', string>>
-type EventErrors = Partial<Record<'startDate' | 'endDate', string>>
+type ShiftErrors = Partial<Record<'label' | 'start' | 'end', string>>
+type EventErrors = Partial<Record<'startDate' | 'endDate' | 'start' | 'end', string>>
 
 const validateShift = (form: ShiftFormState): ShiftErrors => {
   const errors: ShiftErrors = {}
   if (!form.label.trim()) errors.label = 'Nom obligatoire.'
   if (!isValidTime(form.start)) errors.start = 'Heure invalide.'
   if (!isValidTime(form.end)) errors.end = 'Heure invalide.'
-  const brk = Number(form.breakMinutes)
-  if (!Number.isFinite(brk) || brk < 0 || brk > 240) errors.breakMinutes = 'Entre 0 et 240 minutes.'
   return errors
 }
 
 const validateEvent = (form: EventFormState): EventErrors => {
   const errors: EventErrors = {}
   if (!form.startDate) errors.startDate = 'Date de début obligatoire.'
-  if (!form.endDate) errors.endDate = 'Date de fin obligatoire.'
-  else if (form.startDate && form.endDate < form.startDate) {
-    errors.endDate = 'La fin ne peut pas précéder le début.'
+  if (isTimedType(form.type)) {
+    if (!form.start) errors.start = 'Heure de début obligatoire.'
+    if (!form.end) errors.end = 'Heure de fin obligatoire.'
+    else if (form.start && form.end <= form.start) {
+      errors.end = 'La fin doit être après le début.'
+    }
+  } else {
+    if (!form.endDate) errors.endDate = 'Date de fin obligatoire.'
+    else if (form.startDate && form.endDate < form.startDate) {
+      errors.endDate = 'La fin ne peut pas précéder le début.'
+    }
   }
   return errors
 }
@@ -162,7 +174,14 @@ export function PlanningEntryModal({
   const setShift = <K extends keyof ShiftFormState>(key: K, value: ShiftFormState[K]) =>
     setShiftForm((current) => ({ ...current, [key]: value }))
   const setEventField = <K extends keyof EventFormState>(key: K, value: EventFormState[K]) =>
-    setEventForm((current) => ({ ...current, [key]: value }))
+    setEventForm((current) => {
+      const next = { ...current, [key]: value }
+      // Un événement à heures précises ne couvre qu'un seul jour — la date de
+      // fin suit toujours la date de début.
+      if (key === 'type' && isTimedType(value as EventType)) next.endDate = next.startDate
+      if (key === 'startDate' && isTimedType(next.type)) next.endDate = value as string
+      return next
+    })
 
   const applyTemplate = (templateId: string) => {
     const template = templates.find((candidate) => candidate.id === templateId)
@@ -185,7 +204,6 @@ export function PlanningEntryModal({
       templateId: shiftForm.templateId || null,
       start: shiftForm.start,
       end: shiftForm.end,
-      breakMinutes: Number(shiftForm.breakMinutes),
       label: shiftForm.label.trim(),
       colorIndex: shiftForm.colorIndex,
       ...(shiftForm.note.trim() ? { note: shiftForm.note.trim() } : {}),
@@ -198,13 +216,15 @@ export function PlanningEntryModal({
     setEventErrors(found)
     if (Object.keys(found).length > 0) return
 
+    const timed = isTimedType(eventForm.type)
     onSaveEvent({
       id: event?.id ?? newId(),
       employeeId,
       type: eventForm.type,
       startDate: eventForm.startDate,
-      endDate: eventForm.endDate,
+      endDate: timed ? eventForm.startDate : eventForm.endDate,
       ...(eventForm.note.trim() ? { note: eventForm.note.trim() } : {}),
+      ...(timed ? { start: eventForm.start, end: eventForm.end } : {}),
     })
     onClose()
   }
@@ -213,17 +233,7 @@ export function PlanningEntryModal({
   const crossesMidnight =
     isValidTime(shiftForm.start) && isValidTime(shiftForm.end) && shiftForm.end <= shiftForm.start
   const holidayName = date ? publicHolidayName(date) : null
-
-  const createRecupFromHoliday = () => {
-    const minutes = workedMinutes(shiftForm.start, shiftForm.end, Number(shiftForm.breakMinutes))
-    setEventForm({
-      type: 'ferie',
-      startDate: date,
-      endDate: date,
-      note: `Récup. ${formatDuration(minutes)} férié`,
-    })
-    setTab('event')
-  }
+  const holidayCreditMinutes = holidayName ? spanMinutes(shiftForm.start, shiftForm.end) : 0
 
   const TABS: { key: Tab; label: string }[] = [
     { key: 'shift', label: 'Créneau' },
@@ -285,14 +295,11 @@ export function PlanningEntryModal({
       {tab === 'shift' ? (
         <div className="flex flex-col gap-4">
           {holidayName ? (
-            <div className="flex items-center justify-between gap-3 rounded-control border border-warning/40 bg-warning-soft px-3 py-2.5">
+            <div className="flex items-center gap-3 rounded-control border border-warning/40 bg-warning-soft px-3 py-2.5">
               <p className="flex items-center gap-2 text-body-sm text-warning-text">
                 <CalendarOff size={16} />
-                Jour férié — {holidayName}
+                Jour férié — {holidayName} · {formatDuration(holidayCreditMinutes)} crédités automatiquement
               </p>
-              <Button variant="secondary" size="sm" onClick={createRecupFromHoliday}>
-                Créer une récupération
-              </Button>
             </div>
           ) : null}
 
@@ -335,17 +342,6 @@ export function PlanningEntryModal({
           </div>
 
           <TextField
-            label="Pause (minutes)"
-            type="number"
-            min={0}
-            max={240}
-            step={5}
-            value={shiftForm.breakMinutes}
-            error={shiftErrors.breakMinutes}
-            onChange={(e) => setShift('breakMinutes', e.target.value)}
-          />
-
-          <TextField
             label="Note"
             placeholder="Facultatif"
             value={shiftForm.note}
@@ -366,22 +362,50 @@ export function PlanningEntryModal({
             ))}
           </SelectField>
 
-          <div className="grid grid-cols-2 gap-4">
-            <TextField
-              label="Du"
-              type="date"
-              value={eventForm.startDate}
-              error={eventErrors.startDate}
-              onChange={(e) => setEventField('startDate', e.target.value)}
-            />
-            <TextField
-              label="Au"
-              type="date"
-              value={eventForm.endDate}
-              error={eventErrors.endDate}
-              onChange={(e) => setEventField('endDate', e.target.value)}
-            />
-          </div>
+          {isTimedType(eventForm.type) ? (
+            <>
+              <TextField
+                label="Le"
+                type="date"
+                value={eventForm.startDate}
+                error={eventErrors.startDate}
+                onChange={(e) => setEventField('startDate', e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <TimeField
+                  label="Début"
+                  value={eventForm.start}
+                  error={eventErrors.start}
+                  onChange={(e) => setEventField('start', e.target.value)}
+                />
+                <TimeField
+                  label="Fin"
+                  value={eventForm.end}
+                  error={eventErrors.end}
+                  onChange={(e) => setEventField('end', e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <TextField
+                  label="Du"
+                  type="date"
+                  value={eventForm.startDate}
+                  error={eventErrors.startDate}
+                  onChange={(e) => setEventField('startDate', e.target.value)}
+                />
+                <TextField
+                  label="Au"
+                  type="date"
+                  value={eventForm.endDate}
+                  error={eventErrors.endDate}
+                  onChange={(e) => setEventField('endDate', e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           <TextField
             label="Note"

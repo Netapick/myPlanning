@@ -33,10 +33,6 @@ export const spanMinutes = (start: string, end: string): number => {
   return to > from ? to - from : to + 1440 - from
 }
 
-/** Durée effectivement travaillée : la durée brute moins la pause. */
-export const workedMinutes = (start: string, end: string, breakMinutes = 0): number =>
-  Math.max(0, spanMinutes(start, end) - breakMinutes)
-
 /** Vrai si le créneau déborde sur le lendemain. */
 export const crossesMidnight = (start: string, end: string): boolean =>
   toMinutes(end) <= toMinutes(start)

@@ -36,4 +36,6 @@ export {
   Printer as IconPrinter,
   RotateCw as IconRefresh,
   CalendarOff,
+  CalendarPlus as IconEvent,
+  UserPlus as IconUserPlus,
 } from 'lucide-react'

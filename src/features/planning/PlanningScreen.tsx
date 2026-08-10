@@ -1,5 +1,4 @@
 import { useMemo, useState, type DragEvent } from 'react'
-import { Link } from 'react-router-dom'
 import { Avatar, FilterChip } from '@/components/ui/Badge'
 import { Button, IconButton } from '@/components/ui/Button'
 import { EmptyState, Panel } from '@/components/ui/Panel'
@@ -17,9 +16,9 @@ import { downloadCsv } from '@/lib/csv'
 import { dateRangesOverlap } from '@/lib/events'
 import { publicHolidayName } from '@/lib/holidays'
 import { colorVar } from '@/lib/palette'
-import { formatDuration, formatSignedDuration, workedMinutes } from '@/lib/time'
+import { formatDuration, formatSignedDuration, spanMinutes } from '@/lib/time'
 import type { Employee, Event, Shift } from '@/lib/types'
-import { EVENT_TYPE_LABELS, fullName } from '@/lib/types'
+import { compareEmployeeNames, EVENT_TYPE_LABELS, fullName } from '@/lib/types'
 import {
   fromIsoWeekValue,
   isToday,
@@ -32,7 +31,14 @@ import {
   weekLabel,
   weekNumber,
 } from '@/lib/week'
-import { useDataStore } from '@/store/data'
+import {
+  EMPTY_EMPLOYEES,
+  EMPTY_EVENTS,
+  EMPTY_SHIFT_TEMPLATES,
+  EMPTY_SHIFTS,
+  EMPTY_TEAMS,
+  useDataStore,
+} from '@/store/data'
 import { useUiStore } from '@/store/ui'
 import { EventBanner } from './EventBanner'
 import { PlanningEntryModal } from './PlanningEntryModal'
@@ -58,11 +64,11 @@ interface DraftTarget {
  * qu'une édition manuelle.
  */
 export function PlanningScreen() {
-  const employees = useDataStore((state) => state.document?.employees ?? [])
-  const teams = useDataStore((state) => state.document?.teams ?? [])
-  const templates = useDataStore((state) => state.document?.shiftTemplates ?? [])
-  const shifts = useDataStore((state) => state.document?.shifts ?? [])
-  const events = useDataStore((state) => state.document?.events ?? [])
+  const employees = useDataStore((state) => state.document?.employees ?? EMPTY_EMPLOYEES)
+  const teams = useDataStore((state) => state.document?.teams ?? EMPTY_TEAMS)
+  const templates = useDataStore((state) => state.document?.shiftTemplates ?? EMPTY_SHIFT_TEMPLATES)
+  const shifts = useDataStore((state) => state.document?.shifts ?? EMPTY_SHIFTS)
+  const events = useDataStore((state) => state.document?.events ?? EMPTY_EVENTS)
   const upsertShift = useDataStore((state) => state.upsertShift)
   const removeShift = useDataStore((state) => state.removeShift)
   const upsertEvent = useDataStore((state) => state.upsertEvent)
@@ -91,7 +97,7 @@ export function PlanningScreen() {
         const haystack = `${fullName(employee)} ${employee.role}`.toLowerCase()
         return haystack.includes(query)
       })
-      .sort((a, b) => fullName(a).localeCompare(fullName(b), 'fr'))
+      .sort(compareEmployeeNames)
   }, [employees, teamFilter, search])
 
   // Soldes RH par personne — calculés sur l'ensemble des événements (pas
@@ -137,7 +143,7 @@ export function PlanningScreen() {
       if (!isoDays.includes(shift.date)) continue
       totals.set(
         shift.employeeId,
-        (totals.get(shift.employeeId) ?? 0) + workedMinutes(shift.start, shift.end, shift.breakMinutes),
+        (totals.get(shift.employeeId) ?? 0) + spanMinutes(shift.start, shift.end),
       )
     }
     return totals
@@ -400,6 +406,8 @@ function EmployeeRow({
   onDragOver: (target: DraftTarget | null) => void
   onDrop: (event: DragEvent<HTMLDivElement>, target: DraftTarget) => void
 }) {
+  const openEmployeeProfile = useUiStore((state) => state.openEmployeeProfile)
+
   return (
     <>
       <div className="group sticky left-0 z-10 flex items-center gap-2.5 border-r border-b border-hairline bg-surface-1 px-3 py-2.5 hover:z-30 print:py-1">
@@ -442,12 +450,13 @@ function EmployeeRow({
                 Heures sup. : {formatSignedDuration(balances.overtimeRemainingMinutes)}
               </p>
             ) : null}
-            <Link
-              to={`/personnel?employee=${employee.id}`}
+            <button
+              type="button"
+              onClick={() => openEmployeeProfile(employee.id)}
               className="mt-3 block text-body-sm font-medium text-accent hover:underline"
             >
               Voir la fiche →
-            </Link>
+            </button>
           </div>
         </div>
       </div>

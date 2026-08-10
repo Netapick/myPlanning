@@ -1,5 +1,5 @@
 import { activeEventFor } from '@/lib/events'
-import { absoluteSpan, formatHours, workedMinutes } from '@/lib/time'
+import { absoluteSpan, formatHours, spanMinutes } from '@/lib/time'
 import { EVENT_TYPE_LABELS, FIXED_TERM_CONTRACTS, fullName } from '@/lib/types'
 import type { PlanningData, Shift } from '@/lib/types'
 import { daysFromToday, isoWeekday, longDateLabel, toIso, weekDays } from '@/lib/week'
@@ -106,7 +106,7 @@ export function computeNotifications(data: PlanningData, reference: Date): Notif
   for (const employee of active) {
     const shifts = shiftsByEmployee.get(employee.id) ?? []
     const minutes = shifts.reduce(
-      (total, shift) => total + workedMinutes(shift.start, shift.end, shift.breakMinutes),
+      (total, shift) => total + spanMinutes(shift.start, shift.end),
       0,
     )
     const quota = employee.contract.weeklyHours * 60

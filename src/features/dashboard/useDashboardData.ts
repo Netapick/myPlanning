@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { employeeBalances } from '@/lib/balances'
-import { workedMinutes } from '@/lib/time'
+import { spanMinutes } from '@/lib/time'
 import { FIXED_TERM_CONTRACTS } from '@/lib/types'
 import type { ContractType, Employee, Event } from '@/lib/types'
 import { daysFromToday, isoWeekday, toIso, weekDays } from '@/lib/week'
@@ -40,7 +40,6 @@ export interface TeamBalanceAlert {
 export interface DashboardData {
   activeCount: number
   weeklyMinutes: number
-  occupancyRate: number
   upcomingItems: UpcomingItem[]
   balanceAlerts: TeamBalanceAlert[]
 }
@@ -60,7 +59,6 @@ export function useDashboardData(): DashboardData {
     const empty: DashboardData = {
       activeCount: 0,
       weeklyMinutes: 0,
-      occupancyRate: 0,
       upcomingItems: [],
       balanceAlerts: [],
     }
@@ -77,18 +75,9 @@ export function useDashboardData(): DashboardData {
 
     const weekShifts = document.shifts.filter((shift) => isoDays.includes(shift.date))
     const weeklyMinutes = weekShifts.reduce(
-      (total, shift) => total + workedMinutes(shift.start, shift.end, shift.breakMinutes),
+      (total, shift) => total + spanMinutes(shift.start, shift.end),
       0,
     )
-
-    // Occupation = heures planifiées / somme des quotas contractuels des
-    // personnes actives ce jour d'ouverture — un repère de charge, pas une
-    // mesure de présence réelle.
-    const openingWeeklyQuota = activeEmployees.reduce((total, employee) => {
-      const openDaysCount = document.settings.openingDays.length
-      return total + (employee.contract.weeklyHours * 60 * openDaysCount) / 5
-    }, 0)
-    const occupancyRate = openingWeeklyQuota > 0 ? weeklyMinutes / openingWeeklyQuota : 0
 
     const upcomingEvents: UpcomingEventItem[] = document.events
       .map((event) => {
@@ -133,6 +122,9 @@ export function useDashboardData(): DashboardData {
       .sort((a, b) => a.sortDate.localeCompare(b.sortDate))
       .slice(0, 6)
 
+    // Toute la liste active, pas seulement les cas alarmants — les heures
+    // sup. doivent être visibles en continu, pas seulement une fois « élevées »
+    // (`overtimeHigh`/`leaveLow` restent comme simples indicateurs de badge).
     const balanceAlerts: TeamBalanceAlert[] = activeEmployees
       .map((employee) => {
         const balances = employeeBalances(employee, document.events, document.shifts)
@@ -146,7 +138,6 @@ export function useDashboardData(): DashboardData {
           overtimeHigh,
         }
       })
-      .filter((alert) => alert.leaveLow || alert.overtimeHigh)
       .sort((a, b) => {
         const scoreOf = (alert: TeamBalanceAlert) =>
           (alert.leaveLow ? LEAVE_LOW_DAYS - alert.leaveRemaining : 0) +
@@ -157,7 +148,6 @@ export function useDashboardData(): DashboardData {
     return {
       activeCount: activeEmployees.filter((employee) => employee.status === 'actif').length,
       weeklyMinutes,
-      occupancyRate,
       upcomingItems,
       balanceAlerts,
     }

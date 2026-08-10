@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Avatar, Badge } from '@/components/ui/Badge'
+import { Avatar, Badge, FilterChip } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -13,16 +14,29 @@ import { useDashboardData } from './useDashboardData'
 const OTHER_COLOR = 'var(--border-strong)'
 const CONTRACT_END_COLOR = 'var(--critical)'
 
-/** Écran Tableau de bord : trois KPI, les prochains événements, les soldes à surveiller. */
+type BalanceTab = 'conges' | 'heuresSup'
+
+/** Écran Tableau de bord : KPI, les prochains événements, les soldes à surveiller. */
 export function DashboardScreen() {
-  const { activeCount, weeklyMinutes, occupancyRate, upcomingItems, balanceAlerts } = useDashboardData()
+  const { activeCount, weeklyMinutes, upcomingItems, balanceAlerts } = useDashboardData()
   const now = new Date()
+  const [balanceTab, setBalanceTab] = useState<BalanceTab>('conges')
+
+  // Congés : seulement les cas à surveiller (CP bas). Heures Sup. : tout le
+  // monde qui a un solde non nul, en continu — pas la peine d'attendre un
+  // seuil « élevé » pour les voir, contrairement à l'alerte CP qui reste un
+  // signal d'urgence ; un solde à 0h n'apporte rien à afficher.
+  const congesAlerts = balanceAlerts.filter((alert) => alert.leaveLow)
+  const heuresSupAlerts = balanceAlerts
+    .filter((alert) => alert.overtimeRemainingMinutes !== 0)
+    .sort((a, b) => b.overtimeRemainingMinutes - a.overtimeRemainingMinutes)
+  const visibleBalances = balanceTab === 'conges' ? congesAlerts : heuresSupAlerts
 
   return (
     <div>
       <PageHeader title="Tableau de bord" subtitle={weekLabel(now)} />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KpiCard
           icon={<IconUsers size={20} />}
           label={activeCount > 1 ? 'Personnes actives' : 'Personne active'}
@@ -32,11 +46,6 @@ export function DashboardScreen() {
           icon={<IconCalendar size={20} />}
           label="Heures planifiées (semaine)"
           value={formatHours(weeklyMinutes)}
-        />
-        <KpiCard
-          icon={<IconPieChart size={20} />}
-          label="Taux d'occupation"
-          value={`${Math.round(occupancyRate * 100)} %`}
         />
       </div>
 
@@ -91,7 +100,8 @@ export function DashboardScreen() {
 
                 const { event, employee, overtimeRemainingMinutes } = item
                 const color = event.type === 'autre' ? OTHER_COLOR : colorVar(EVENT_TYPE_COLOR_INDEX[event.type])
-                const showOvertime = event.type === 'ferie' || overtimeRemainingMinutes > 0
+                const showOvertime =
+                  event.type === 'recup_hs' || event.type === 'recup_ferie' || overtimeRemainingMinutes > 0
                 return (
                   <li key={event.id} className="flex items-center gap-3 px-5 py-3">
                     <span
@@ -122,34 +132,83 @@ export function DashboardScreen() {
         </Panel>
 
         <Panel>
-          <PanelHeader title="Soldes de l'équipe" />
-          {balanceAlerts.length === 0 ? (
+          <PanelHeader
+            title="Soldes de l'équipe"
+            action={
+              <div className="flex gap-2">
+                <TabChip active={balanceTab === 'conges'} count={congesAlerts.length} onClick={() => setBalanceTab('conges')}>
+                  Congés
+                </TabChip>
+                <TabChip
+                  active={balanceTab === 'heuresSup'}
+                  count={heuresSupAlerts.length}
+                  onClick={() => setBalanceTab('heuresSup')}
+                >
+                  Heures Sup.
+                </TabChip>
+              </div>
+            }
+          />
+          {visibleBalances.length === 0 ? (
             <EmptyState
               icon={<IconPieChart size={24} />}
-              title="Rien à signaler côté soldes"
-              description="Aucun CP bas ni solde d'heures sup. élevé pour l'instant."
+              title="Rien à signaler"
+              description={
+                balanceTab === 'conges'
+                  ? 'Aucun CP bas pour l’instant.'
+                  : 'Personne n’a de solde d’heures sup. pour l’instant.'
+              }
             />
           ) : (
             <ul className="divide-y divide-hairline">
-              {balanceAlerts.map(({ employee, leaveRemaining, overtimeRemainingMinutes, leaveLow, overtimeHigh }) => (
+              {visibleBalances.map(({ employee, leaveRemaining, overtimeRemainingMinutes, overtimeHigh }) => (
                 <li key={employee.id} className="flex items-center gap-3 px-5 py-3">
                   <Avatar employee={employee} size={32} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-body-sm font-medium text-ink">{fullName(employee)}</p>
                     <p className="tabular truncate text-body-sm text-muted">
-                      CP restants : {leaveRemaining} j · Heures sup. : {formatSignedDuration(overtimeRemainingMinutes)}
+                      {balanceTab === 'conges'
+                        ? `CP restants : ${leaveRemaining} j`
+                        : `Heures sup. : ${formatSignedDuration(overtimeRemainingMinutes)}`}
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {leaveLow ? <Badge tone="warning">CP bas</Badge> : null}
-                    {overtimeHigh ? <Badge tone="serious">Sup. élevées</Badge> : null}
-                  </div>
+                  {balanceTab === 'conges' ? (
+                    <Badge tone="warning">CP bas</Badge>
+                  ) : overtimeHigh ? (
+                    <Badge tone="serious">Sup. élevées</Badge>
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
         </Panel>
       </div>
+    </div>
+  )
+}
+
+/** `FilterChip` avec un badge chiffré rouge (même pattern que la cloche de notifications), masqué si `count` est nul. */
+function TabChip({
+  active,
+  count,
+  onClick,
+  children,
+}: {
+  active: boolean
+  count: number
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative">
+      <FilterChip active={active} onClick={onClick}>
+        {children}
+      </FilterChip>
+      {count > 0 ? (
+        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-critical px-1 text-[10px] font-bold text-white">
+          {count > 9 ? '9+' : count}
+        </span>
+      ) : null}
     </div>
   )
 }

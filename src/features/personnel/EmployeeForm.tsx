@@ -175,7 +175,7 @@ export function EmployeeForm({ open, employee, teams, events, shifts, onSave, on
     <Modal
       open={open}
       size="wide"
-      title={employee ? 'Modifier la fiche' : 'Ajouter un membre'}
+      title={employee ? 'Modifier la fiche' : 'Ajouter un personnel'}
       onClose={onClose}
       footer={
         <>
@@ -325,7 +325,7 @@ export function EmployeeForm({ open, employee, teams, events, shifts, onSave, on
             <BalanceStat
               label="Heures sup. restantes"
               value={formatSignedDuration(balances.overtimeRemainingMinutes)}
-              sub={`+${formatDuration(balances.overtimeAccruedMinutes)} cumulées · ${formatDuration(balances.overtimeRecoveredMinutes)} récupérées`}
+              sub={`+${formatDuration(balances.overtimeAccruedMinutes)} cumulées · +${formatDuration(balances.overtimeHolidayCreditMinutes)} fériés · -${formatDuration(balances.overtimeRecoveredMinutes)} récup. HS · -${formatDuration(balances.holidayRecoveryMinutes)} récup. férié`}
             />
             <BalanceStat label="Repos posés" value={String(balances.restDaysTaken)} sub="cette année" />
           </div>

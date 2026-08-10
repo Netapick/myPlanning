@@ -4,14 +4,14 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState, Panel, PanelHeader } from '@/components/ui/Panel'
 import { IconCalendar, IconEdit, IconPlus, IconTrash } from '@/components/ui/icons'
 import { colorVar, nextColorIndex } from '@/lib/palette'
-import { formatDuration, formatRange, workedMinutes } from '@/lib/time'
+import { formatDuration, formatRange, spanMinutes } from '@/lib/time'
 import type { ShiftTemplate } from '@/lib/types'
-import { useDataStore } from '@/store/data'
+import { EMPTY_SHIFT_TEMPLATES, useDataStore } from '@/store/data'
 import { ShiftTemplateForm } from './ShiftTemplateForm'
 
 /** Onglet Paramètres > Tranches horaires : les modèles réutilisables de poste. */
 export function ShiftTemplatesTab() {
-  const templates = useDataStore((state) => state.document?.shiftTemplates ?? [])
+  const templates = useDataStore((state) => state.document?.shiftTemplates ?? EMPTY_SHIFT_TEMPLATES)
   const upsertTemplate = useDataStore((state) => state.upsertTemplate)
   const removeTemplate = useDataStore((state) => state.removeTemplate)
 
@@ -58,11 +58,8 @@ export function ShiftTemplatesTab() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-ink">{template.name}</p>
                 <p className="tabular text-body-sm text-muted">
-                  {formatRange(template.start, template.end)}
-                  {template.breakMinutes > 0 ? ` · pause ${template.breakMinutes} min` : ''}
-                  {' · '}
-                  {formatDuration(workedMinutes(template.start, template.end, template.breakMinutes))}{' '}
-                  travaillées
+                  {formatRange(template.start, template.end)} ·{' '}
+                  {formatDuration(spanMinutes(template.start, template.end))} travaillées
                 </p>
               </div>
               <div className="flex gap-1">

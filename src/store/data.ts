@@ -12,6 +12,23 @@ import type {
 } from '@/lib/types'
 
 /**
+ * Tableaux vides stables — à utiliser comme repli `state.document?.x ?? EMPTY_X`
+ * dans les sélecteurs zustand, jamais `?? []`. Un littéral `[]` inline crée une
+ * nouvelle référence à chaque appel du sélecteur ; tant que `document` est
+ * chargé avant le rendu du composant (cas de tous les écrans derrière
+ * `<Outlet />`), React ne s'en aperçoit jamais. Mais un composant qui peut
+ * rendre AVANT le chargement (ex. `AppShell.tsx`, qui affiche lui-même l'état
+ * de chargement) réévalue ce repli à chaque notification du store — avec un
+ * littéral `[]`, `useSyncExternalStore` ne voit jamais un instantané stable et
+ * React lève « Maximum update depth exceeded ».
+ */
+export const EMPTY_EMPLOYEES: Employee[] = []
+export const EMPTY_TEAMS: Team[] = []
+export const EMPTY_EVENTS: Event[] = []
+export const EMPTY_SHIFTS: Shift[] = []
+export const EMPTY_SHIFT_TEMPLATES: ShiftTemplate[] = []
+
+/**
  * Comble les champs RH ajoutés après coup (soldes CP/heures sup.) sur des
  * fiches employé lues depuis un fichier plus ancien — import de sauvegarde ou
  * document jamais réécrit depuis. La validation reste structurelle uniquement

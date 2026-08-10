@@ -59,6 +59,18 @@ interface UiState {
   canGoBack: boolean
   canGoForward: boolean
   recordNavigation: (pathname: string, type: 'PUSH' | 'POP' | 'REPLACE') => void
+
+  /**
+   * Fiche employé ouverte, indépendamment de l'écran affiché — un survol dans
+   * Planning ou un lien dans Personnels doit pouvoir l'ouvrir sans jamais
+   * changer d'écran actif. Une seule instance de `EmployeeForm` (montée dans
+   * `AppShell.tsx`) lit ce state plutôt que chaque écran gérant sa propre
+   * modale + un paramètre d'URL.
+   */
+  employeeProfile: { mode: 'edit'; id: string } | { mode: 'create' } | null
+  openEmployeeProfile: (id: string) => void
+  openEmployeeCreate: () => void
+  closeEmployeeProfile: () => void
 }
 
 export const useUiStore = create<UiState>()((set) => {
@@ -122,6 +134,11 @@ export const useUiStore = create<UiState>()((set) => {
         // Position inconnue (premier montage) : nouveau point de départ.
         return { navHistory: [pathname], navIndex: 0, canGoBack: false, canGoForward: false }
       }),
+
+    employeeProfile: null,
+    openEmployeeProfile: (id) => set({ employeeProfile: { mode: 'edit', id } }),
+    openEmployeeCreate: () => set({ employeeProfile: { mode: 'create' } }),
+    closeEmployeeProfile: () => set({ employeeProfile: null }),
   }
 })
 

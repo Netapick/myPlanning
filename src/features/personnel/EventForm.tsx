@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
-import { SelectField, TextField } from '@/components/ui/Field'
+import { SelectField, TextField, TimeField } from '@/components/ui/Field'
 import type { Employee, Event, EventType } from '@/lib/types'
 import { EVENT_TYPE_LABELS, fullName } from '@/lib/types'
 import { toIso } from '@/lib/week'
 import { newId } from '@/store/data'
+
+/** Types d'événement à heures précises — un seul jour, une plage horaire. */
+const TIMED_TYPES: EventType[] = ['recup_hs']
+const isTimedType = (type: EventType): boolean => TIMED_TYPES.includes(type)
 
 interface FormState {
   employeeId: string
   type: EventType
   startDate: string
   endDate: string
+  start: string
+  end: string
   note: string
 }
 
@@ -20,6 +26,8 @@ const emptyForm = (employeeId: string): FormState => ({
   type: 'conges',
   startDate: toIso(new Date()),
   endDate: toIso(new Date()),
+  start: '',
+  end: '',
   note: '',
 })
 
@@ -28,18 +36,28 @@ const toForm = (event: Event): FormState => ({
   type: event.type,
   startDate: event.startDate,
   endDate: event.endDate,
+  start: event.start ?? '',
+  end: event.end ?? '',
   note: event.note ?? '',
 })
 
-type Errors = Partial<Record<'employeeId' | 'startDate' | 'endDate', string>>
+type Errors = Partial<Record<'employeeId' | 'startDate' | 'endDate' | 'start' | 'end', string>>
 
 const validate = (form: FormState): Errors => {
   const errors: Errors = {}
   if (!form.employeeId) errors.employeeId = 'Choisis une personne.'
   if (!form.startDate) errors.startDate = 'Date de début obligatoire.'
-  if (!form.endDate) errors.endDate = 'Date de fin obligatoire.'
-  else if (form.startDate && form.endDate < form.startDate) {
-    errors.endDate = 'La fin ne peut pas précéder le début.'
+  if (isTimedType(form.type)) {
+    if (!form.start) errors.start = 'Heure de début obligatoire.'
+    if (!form.end) errors.end = 'Heure de fin obligatoire.'
+    else if (form.start && form.end <= form.start) {
+      errors.end = 'La fin doit être après le début.'
+    }
+  } else {
+    if (!form.endDate) errors.endDate = 'Date de fin obligatoire.'
+    else if (form.startDate && form.endDate < form.startDate) {
+      errors.endDate = 'La fin ne peut pas précéder le début.'
+    }
   }
   return errors
 }
@@ -82,20 +100,29 @@ export function EventForm({
   }, [open, event, defaultEmployeeId])
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
-    setForm((current) => ({ ...current, [key]: value }))
+    setForm((current) => {
+      const next = { ...current, [key]: value }
+      // Un événement à heures précises ne couvre qu'un seul jour — la date de
+      // fin suit toujours la date de début, pas besoin de la saisir.
+      if (key === 'type' && isTimedType(value as EventType)) next.endDate = next.startDate
+      if (key === 'startDate' && isTimedType(next.type)) next.endDate = value as string
+      return next
+    })
 
   const submit = () => {
     const found = validate(form)
     setErrors(found)
     if (Object.keys(found).length > 0) return
 
+    const timed = isTimedType(form.type)
     onSave({
       id: event?.id ?? newId(),
       employeeId: form.employeeId,
       type: form.type,
       startDate: form.startDate,
-      endDate: form.endDate,
+      endDate: timed ? form.startDate : form.endDate,
       ...(form.note.trim() ? { note: form.note.trim() } : {}),
+      ...(timed ? { start: form.start, end: form.end } : {}),
     })
     onClose()
   }
@@ -142,22 +169,50 @@ export function EventForm({
           ))}
         </SelectField>
 
-        <div className="grid grid-cols-2 gap-4">
-          <TextField
-            label="Du"
-            type="date"
-            value={form.startDate}
-            error={errors.startDate}
-            onChange={(e) => set('startDate', e.target.value)}
-          />
-          <TextField
-            label="Au"
-            type="date"
-            value={form.endDate}
-            error={errors.endDate}
-            onChange={(e) => set('endDate', e.target.value)}
-          />
-        </div>
+        {isTimedType(form.type) ? (
+          <>
+            <TextField
+              label="Le"
+              type="date"
+              value={form.startDate}
+              error={errors.startDate}
+              onChange={(e) => set('startDate', e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <TimeField
+                label="Début"
+                value={form.start}
+                error={errors.start}
+                onChange={(e) => set('start', e.target.value)}
+              />
+              <TimeField
+                label="Fin"
+                value={form.end}
+                error={errors.end}
+                onChange={(e) => set('end', e.target.value)}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <TextField
+                label="Du"
+                type="date"
+                value={form.startDate}
+                error={errors.startDate}
+                onChange={(e) => set('startDate', e.target.value)}
+              />
+              <TextField
+                label="Au"
+                type="date"
+                value={form.endDate}
+                error={errors.endDate}
+                onChange={(e) => set('endDate', e.target.value)}
+              />
+            </div>
+          </>
+        )}
 
         <TextField
           label="Note"
