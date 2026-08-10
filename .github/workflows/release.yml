@@ -43,14 +43,26 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Le bundler Tauri signe via `certificateThumbprint` (tauri.conf.json), qui
+      # référence un certificat déjà présent dans le magasin Windows — il ne lit
+      # pas WINDOWS_CERTIFICATE tout seul, contrairement à la signature macOS de
+      # tauri-action. On importe donc explicitement le certificat ici.
+      - name: Importer le certificat de signature
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          $pfxPath = Join-Path $env:RUNNER_TEMP "certificate.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $bytes)
+          $securePw = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePw
+          Remove-Item $pfxPath
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signature Authenticode auto-signée (voir README/mémoire du projet) : ne
-          # supprime pas l'avertissement "éditeur inconnu" de Windows (pas de
-          # chaîne de confiance reconnue), juste une signature technique.
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: >-
