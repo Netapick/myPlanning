@@ -4,6 +4,7 @@ import {
   IconClock,
   IconClose,
   IconDashboard,
+  IconLayers,
   IconSettings,
   IconUsers,
 } from '@/components/ui/icons'
@@ -31,7 +32,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     <>
       <div className="mb-8 flex items-center gap-3 px-6">
         <span className="flex h-10 w-10 items-center justify-center rounded-control bg-accent text-accent-contrast">
-          <IconCalendar size={22} />
+          <IconLayers size={22} />
         </span>
         <div>
           <h1 className="text-headline-md font-bold text-accent">myPlanning</h1>

@@ -65,6 +65,17 @@
     display: none !important;
   }
 
+  /* Sans ça, Chrome/WebView2 ignorent par défaut les couleurs de fond à
+     l'impression — les remplissages teintés des événements (voir
+     EventBanner.tsx, `eventFill()`) et les surlignages de jour férié
+     resteraient invisibles sur papier alors qu'ils sont déjà calculés dans
+     le DOM (`style={{ backgroundColor: ... }}`). */
+  body:has(.print-area) .print-area,
+  body:has(.print-area) .print-area * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   /* Rendu clair forcé, quel que soit le thème actif à l'écran — les tokens
      sont redéfinis ici, après theme.css dans l'ordre d'import, donc gagnent
      la cascade (même spécificité que `[data-theme='dark']`, mais plus tard). */
@@ -77,17 +88,25 @@
     --surface-3: #e7e8ea;
     --surface-header: #ebecf0;
 
-    --border-hairline: #dfe1e6;
-    --border-strong: #c3c6d6;
+    /* Plus foncées que sur écran (#dfe1e6/#c3c6d6) : sur papier, sans les
+       aplats de surface pour donner du contraste, un filet aussi pâle rend
+       la grille difficile à suivre à l'œil d'une colonne à l'autre. */
+    --border-hairline: #aeb2bf;
+    --border-strong: #8b8f9e;
 
     --text-primary: #191c1e;
     --text-secondary: #434654;
     --text-tertiary: #737685;
     --text-inverse: #ffffff;
 
-    --accent: #0052cc;
+    /* --accent/--accent-soft servent uniquement à surligner « aujourd'hui »
+       dans la grille (colonne du jour, texte de la date) — sur une feuille
+       imprimée, « aujourd'hui » change tous les jours et n'a pas de sens à
+       mettre en avant. Neutralisés ici plutôt que retouchés dans le JSX :
+       même mécanisme que les autres jetons de cette liste. */
+    --accent: #191c1e;
     --accent-strong: #003d9b;
-    --accent-soft: color-mix(in srgb, #0052cc 10%, transparent);
+    --accent-soft: #ebecf0;
     --accent-contrast: #ffffff;
 
     --good: #0ca30c;

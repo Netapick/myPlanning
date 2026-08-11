@@ -137,6 +137,30 @@ export function PlanningScreen() {
     return map
   }, [events, weekStart, weekEnd])
 
+  // Notes de créneau/événement de la semaine, par personne — uniquement pour
+  // le bloc « Observations » à l'impression (voir plus bas), regroupé en un
+  // seul endroit sous la grille plutôt qu'éclaté entre chaque ligne.
+  const weekNotesByEmployee = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const employee of visibleEmployees) {
+      const entries = days
+        .map((day) => {
+          const date = toIso(day)
+          const shiftNotes = (shiftsByCell.get(`${employee.id}|${date}`) ?? [])
+            .map((shift) => shift.note)
+            .filter((note): note is string => Boolean(note))
+          const dayEvent = (eventsByEmployee.get(employee.id) ?? []).find(
+            (event) => date >= event.startDate && date <= event.endDate,
+          )
+          const notes = [...shiftNotes, ...(dayEvent?.note ? [dayEvent.note] : [])]
+          return notes.length ? `${shortDayLabel(day)} ${shortDateLabel(day)} : ${notes.join(', ')}` : null
+        })
+        .filter((entry): entry is string => Boolean(entry))
+      if (entries.length > 0) map.set(employee.id, entries.join(' · '))
+    }
+    return map
+  }, [visibleEmployees, days, shiftsByCell, eventsByEmployee])
+
   const weeklyMinutes = useMemo(() => {
     const totals = new Map<string, number>()
     for (const shift of shifts) {
@@ -274,18 +298,26 @@ export function PlanningScreen() {
           />
         </Panel>
       ) : (
-        <Panel className="print-area flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Panel className="print-area flex min-h-0 flex-col overflow-hidden">
           {/* Visible uniquement à l'impression : le reste de l'en-tête (titre,
               navigation) vit hors de `.print-area` et disparaît sur papier —
               sans ça, la feuille imprimée ne dit plus de quelle semaine il
               s'agit une fois l'en-tête du navigateur aussi supprimé. */}
-          <div className="hidden print:block mb-1">
+          <div className="hidden print:block mb-1 text-center">
             <p className="text-headline-md font-bold text-ink">Planning Weldom Cosne sur Loire</p>
             <p className="text-body-md text-muted">
               {weekLabel(reference)} · S{weekNumber(reference)}
             </p>
           </div>
-          <div className="flex-1 overflow-auto">
+          {/* Pas de hauteur/`overflow-y` forcée ici : la grille prend sa
+              hauteur naturelle (une ligne pour une seule personne, sans
+              bande vide en dessous) et c'est `<main>` (AppShell) qui défile
+              verticalement, comme pour les autres écrans. `overflow-x-auto`
+              seul reste nécessaire pour les petits écrans (7 colonnes de
+              jour peuvent dépasser la largeur disponible). Les `sticky` de
+              l'en-tête de jours et de la colonne des noms s'accrochent
+              alors au défilement de `<main>` plutôt qu'à un conteneur dédié. */}
+          <div className="overflow-x-auto">
             <div className="grid w-full grid-cols-[minmax(140px,200px)_repeat(7,minmax(0,1fr))]">
               <div className="sticky left-0 z-10 border-r border-b border-hairline bg-surface-header" />
               {days.map((day) => {
@@ -321,10 +353,11 @@ export function PlanningScreen() {
                 )
               })}
 
-              {visibleEmployees.map((employee) => (
+              {visibleEmployees.map((employee, index) => (
                 <EmployeeRow
                   key={employee.id}
                   employee={employee}
+                  isLastRow={index === visibleEmployees.length - 1}
                   days={isoDays}
                   dayDates={days}
                   shiftsByCell={shiftsByCell}
@@ -344,6 +377,26 @@ export function PlanningScreen() {
               ))}
             </div>
           </div>
+
+          {/* Bloc « Observations », visible uniquement à l'impression et
+              seulement s'il y a au moins une note cette semaine-là — un seul
+              bloc groupé sous la grille plutôt qu'éclaté entre les lignes,
+              avec une bordure plus marquée pour bien le séparer du planning. */}
+          {weekNotesByEmployee.size > 0 ? (
+            <div className="hidden print:block mt-2 border-t-2 border-hairline pt-2">
+              <p className="text-label tracking-wide text-muted uppercase">Observations</p>
+              <dl className="mt-1 space-y-0.5">
+                {visibleEmployees
+                  .filter((employee) => weekNotesByEmployee.has(employee.id))
+                  .map((employee) => (
+                    <div key={employee.id} className="flex gap-2 text-body-sm text-ink">
+                      <dt className="shrink-0 font-medium">{fullName(employee)} :</dt>
+                      <dd>{weekNotesByEmployee.get(employee.id)}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </div>
+          ) : null}
         </Panel>
       )}
 
@@ -373,6 +426,7 @@ function addDays(date: Date, amount: number) {
 
 function EmployeeRow({
   employee,
+  isLastRow,
   days,
   dayDates,
   shiftsByCell,
@@ -390,6 +444,10 @@ function EmployeeRow({
   onDrop,
 }: {
   employee: Employee
+  /** La grille n'a plus de bande vide sous la dernière ligne (voir plus bas) :
+   *  sans place en dessous, la carte de survol du nom doit s'ouvrir vers le
+   *  haut pour cette ligne précise plutôt que d'être coupée par le panneau. */
+  isLastRow: boolean
   days: string[]
   dayDates: Date[]
   shiftsByCell: Map<string, Shift[]>
@@ -437,7 +495,11 @@ function EmployeeRow({
               cliquable. Le panneau reste un descendant du `group` survolé
               (la ligne sticky) même une fois positionné hors de sa boîte,
               donc y déplacer le curseur ne le referme pas. */}
-          <div className="no-print absolute top-full left-0 z-20 mt-1 w-56 rounded-panel border border-hairline bg-surface-1 p-3 opacity-0 shadow-overlay transition-opacity group-hover:opacity-100">
+          <div
+            className={`no-print absolute left-0 z-20 w-56 rounded-panel border border-hairline bg-surface-1 p-3 opacity-0 shadow-overlay transition-opacity group-hover:opacity-100 ${
+              isLastRow ? 'bottom-full mb-1' : 'top-full mt-1'
+            }`}
+          >
             <p className="text-body-sm font-semibold text-ink">{fullName(employee)}</p>
             <p className="text-body-sm text-muted">{employee.role || 'Poste non renseigné'}</p>
             <p className="tabular text-body-sm text-muted">
@@ -486,7 +548,7 @@ function EmployeeRow({
             }}
             onDragLeave={() => onDragOver(null)}
             onDrop={(event) => onDrop(event, { employeeId: employee.id, date })}
-            className={`flex min-h-20 min-w-0 flex-col gap-1 border-r border-b border-hairline p-1.5 last:border-r-0 print:min-h-0 print:gap-0 print:px-1 print:py-0.5 ${
+            className={`flex min-h-20 min-w-0 flex-col gap-1 border-r border-b border-hairline p-1.5 print:min-h-0 print:gap-0 print:px-1 print:py-0.5 ${
               isDropTarget ? 'border-2 border-dashed border-accent bg-accent-soft' : ''
             } ${dragging && !isDropTarget ? 'bg-surface-0' : ''}`}
           >

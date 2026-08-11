@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { Panel, PanelHeader } from '@/components/ui/Panel'
 import { IconDownload, IconUpload } from '@/components/ui/icons'
-import { resetDocument } from '@/lib/api'
+import { exportDocument, resetDocument } from '@/lib/api'
 import { validateDocumentShape } from '@/lib/validateDocument'
 import { useDataStore } from '@/store/data'
 
@@ -22,21 +22,26 @@ export function DataTab() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState('')
   const [exportMessage, setExportMessage] = useState('')
+  const [exportError, setExportError] = useState('')
   const [confirmReset, setConfirmReset] = useState(false)
   const [pendingImport, setPendingImport] = useState<unknown>(null)
 
-  const exportData = () => {
+  const exportData = async () => {
     if (!document) return
-    const blob = new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = window.document.createElement('a')
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
     const name = `myplanning-${stamp}.json`
-    link.href = url
-    link.download = name
-    link.click()
-    URL.revokeObjectURL(url)
-    setExportMessage(`« ${name} » téléchargé dans le dossier de téléchargements par défaut du navigateur.`)
+    setExportError('')
+    try {
+      const outcome = await exportDocument(document, name)
+      if (outcome.status === 'saved') {
+        setExportMessage(`« ${name} » enregistré dans ${outcome.path}`)
+      } else if (outcome.status === 'downloaded') {
+        setExportMessage(`« ${name} » téléchargé — vérifie le dossier de téléchargements de ton navigateur.`)
+      }
+      // 'cancelled' : l'utilisateur a fermé la boîte de dialogue de lui-même, rien à signaler.
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Export impossible.')
+    }
   }
 
   const onFileChosen = async (file: File) => {
@@ -96,7 +101,7 @@ export function DataTab() {
       <Panel>
         <PanelHeader title="Sauvegarde manuelle" />
         <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row">
-          <Button variant="secondary" icon={<IconDownload size={16} />} onClick={exportData}>
+          <Button variant="secondary" icon={<IconDownload size={16} />} onClick={() => void exportData()}>
             Exporter en JSON
           </Button>
           <Button
@@ -119,7 +124,12 @@ export function DataTab() {
           />
         </div>
         {exportMessage ? (
-          <p className="border-t border-hairline px-5 py-3 text-body-sm text-good-text">{exportMessage}</p>
+          <p className="border-t border-hairline px-5 py-3 text-body-sm break-all text-good-text">
+            {exportMessage}
+          </p>
+        ) : null}
+        {exportError ? (
+          <p className="border-t border-hairline px-5 py-3 text-body-sm text-critical-text">{exportError}</p>
         ) : null}
         {importError ? (
           <p className="border-t border-hairline px-5 py-3 text-body-sm text-critical-text">

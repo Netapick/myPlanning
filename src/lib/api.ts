@@ -30,6 +30,17 @@ export interface SaveResult {
   savedAt: string | null
 }
 
+/**
+ * Résultat de « Exporter en JSON » (Paramètres > Données) — trois issues
+ * distinctes : desktop réussi (on connaît le chemin exact choisi dans la
+ * boîte de dialogue), desktop annulé (rien à dire à l'utilisateur), ou web
+ * (le navigateur choisit seul l'emplacement, jamais connu côté JS).
+ */
+export type ExportOutcome =
+  | { status: 'saved'; path: string }
+  | { status: 'cancelled' }
+  | { status: 'downloaded' }
+
 /** Présent uniquement quand l'app tourne dans la coquille desktop Tauri. */
 export const isTauri = (): boolean => '__TAURI_INTERNALS__' in window
 
@@ -86,6 +97,30 @@ const resetDocumentTauri = async (): Promise<LoadResult> => {
   return invoke<LoadResult>('reset_document')
 }
 
+const exportDocumentTauri = async (document: PlanningData, name: string): Promise<ExportOutcome> => {
+  const { invoke } = await import('@tauri-apps/api/core')
+  const { save } = await import('@tauri-apps/plugin-dialog')
+  const path = await save({ defaultPath: name, filters: [{ name: 'JSON', extensions: ['json'] }] })
+  if (!path) return { status: 'cancelled' }
+  await invoke('export_document', { document, path })
+  return { status: 'saved', path }
+}
+
+// --- Mode navigateur : téléchargement blob ----------------------------------
+// Un vrai navigateur ne dit jamais à la page où il a enregistré le fichier —
+// seul le mode desktop (boîte de dialogue Tauri ci-dessus) connaît le chemin.
+
+const exportDocumentWeb = (document: PlanningData, name: string): ExportOutcome => {
+  const blob = new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = window.document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(url)
+  return { status: 'downloaded' }
+}
+
 // --- Dispatch ----------------------------------------------------------------
 
 export const loadDocument = (): Promise<LoadResult> =>
@@ -96,3 +131,6 @@ export const saveDocument = (document: PlanningData): Promise<SaveResult> =>
 
 export const resetDocument = (): Promise<LoadResult> =>
   isTauri() ? resetDocumentTauri() : resetDocumentHttp()
+
+export const exportDocument = (document: PlanningData, name: string): Promise<ExportOutcome> =>
+  isTauri() ? exportDocumentTauri(document, name) : Promise.resolve(exportDocumentWeb(document, name))

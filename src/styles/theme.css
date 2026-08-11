@@ -252,6 +252,34 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Barre de défilement fine et discrète par défaut — partout, pas juste
+       dans un conteneur choisi au cas par cas. La barre système (épaisse,
+       carrée) détonne avec le reste de l'interface. */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  /* `::-webkit-scrollbar` ne s'hérite pas comme une propriété CSS classique :
+     un sélecteur universel est nécessaire pour couvrir tout conteneur
+     défilant, présent ou futur, sans avoir à poser une classe dessus. */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    /* Bordure transparente + `background-clip: content-box` détache le
+       curseur des bords du rail — un peu d'air autour, façon scrollbar
+       overlay macOS, plus doux qu'un bloc plein collé aux bords. */
+    background-color: color-mix(in srgb, var(--border-strong) 70%, transparent);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--border-strong);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   body {
@@ -286,6 +314,17 @@
   }
 }
 
+/* Remplissage de la barre de progression du splash — durée pilotée depuis
+   SplashScreen.tsx (SPLASH_MIN_MS), pas ici. */
+@keyframes splash-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Utilitaires maison
 --------------------------------------------------------------------------- */
@@ -305,24 +344,5 @@
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
-  }
-}
-
-/* Barre de défilement fine pour les panneaux internes — la barre système par
-   défaut est trop épaisse pour une liste de quelques centaines de pixels. */
-@utility scroll-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--border-strong);
-    border-radius: 9999px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
   }
 }

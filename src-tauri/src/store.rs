@@ -192,6 +192,17 @@ pub fn write_document(app: &AppHandle, doc: &Value) -> Result<(), String> {
     Ok(())
 }
 
+/// Écrit le document à un chemin choisi par l'utilisateur (boîte de dialogue
+/// « Enregistrer sous ») — contrairement à `write_document`, ce n'est pas le
+/// fichier vivant de l'app : pas de copie de sauvegarde ni d'écriture atomique,
+/// juste une exportation ponctuelle vers un nouveau fichier.
+pub fn export_document(doc: &Value, path: &Path) -> Result<(), String> {
+    validate_document(doc)?;
+    let pretty = serde_json::to_string_pretty(doc)
+        .map_err(|error| format!("Sérialisation impossible : {error}"))?;
+    fs::write(path, format!("{pretty}\n")).map_err(|error| format!("Écriture impossible : {error}"))
+}
+
 /// Date de dernière écriture du fichier, pour l'indicateur de sauvegarde —
 /// même rôle que `lastSavedAt` côté JS.
 pub fn last_saved_at(app: &AppHandle) -> Option<String> {

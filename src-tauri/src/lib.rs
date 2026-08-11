@@ -7,10 +7,12 @@ mod store;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             commands::load_document,
             commands::save_document,
             commands::reset_document,
+            commands::export_document,
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de myPlanning");

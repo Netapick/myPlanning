@@ -94,7 +94,7 @@ export function NotificationsBell() {
               </p>
             </div>
           ) : (
-            <ul className="max-h-96 divide-y divide-hairline overflow-y-auto scroll-thin">
+            <ul className="max-h-96 divide-y divide-hairline overflow-y-auto">
               {notifications.map((notification) => (
                 <li key={notification.key} className="group flex gap-3 px-4 py-3 hover:bg-surface-2">
                   <span

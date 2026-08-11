@@ -38,4 +38,5 @@ export {
   CalendarOff,
   CalendarPlus as IconEvent,
   UserPlus as IconUserPlus,
+  Layers as IconLayers,
 } from 'lucide-react'

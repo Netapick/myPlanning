@@ -5,6 +5,7 @@
 
 use serde::Serialize;
 use serde_json::Value;
+use std::path::Path;
 use tauri::AppHandle;
 
 use crate::store;
@@ -57,4 +58,12 @@ pub fn reset_document(app: AppHandle) -> Result<LoadResult, String> {
         file: store::data_file_label(),
         saved_at,
     })
+}
+
+/// Sauvegarde manuelle (Paramètres > Données > Exporter en JSON) : `path`
+/// vient de la boîte de dialogue « Enregistrer sous » ouverte côté JS, donc
+/// déjà connu de l'appelant — pas besoin de le renvoyer.
+#[tauri::command]
+pub fn export_document(document: Value, path: String) -> Result<(), String> {
+    store::export_document(&document, Path::new(&path))
 }

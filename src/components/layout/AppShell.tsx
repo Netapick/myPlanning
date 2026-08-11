@@ -9,14 +9,12 @@ import { EMPTY_EMPLOYEES, EMPTY_EVENTS, EMPTY_SHIFTS, EMPTY_TEAMS, useDataStore 
 import { useUiStore } from '@/store/ui'
 import { DevBanner } from './DevBanner'
 import { SideNav } from './SideNav'
-import { SplashScreen } from './SplashScreen'
+import { SPLASH_MAX_MS, SPLASH_MIN_MS, SplashScreen } from './SplashScreen'
 import { TopBar } from './TopBar'
 import { UpdateBanner } from './UpdateBanner'
 
 /** Survit à un F5 (même session) mais pas à une fermeture/réouverture de fenêtre ni à un relancement de l'exécutable. */
 const SPLASH_KEY = 'myplanning.splashShown'
-/** Durée plancher : évite un flash disgracieux si le disque répond instantanément. */
-const SPLASH_MIN_MS = 700
 
 /**
  * Coquille de l'application : barre latérale + barre du haut + plan de
@@ -51,6 +49,7 @@ export function AppShell() {
     }
   })
   const [splashFloorDone, setSplashFloorDone] = useState(false)
+  const [splashCeilingHit, setSplashCeilingHit] = useState(false)
   const [availableUpdate, setAvailableUpdate] = useState<AvailableUpdate | null>(null)
 
   useEffect(() => {
@@ -75,7 +74,17 @@ export function AppShell() {
     return () => clearTimeout(timer)
   }, [isFreshSession])
 
-  const showSplash = isFreshSession && (status === 'loading' || !splashFloorDone)
+  // Filet de sécurité : même si `load()` traîne anormalement (disque lent,
+  // erreur), le splash ne doit jamais rester affiché au-delà de ce plafond —
+  // l'utilisateur retombe alors sur l'indicateur « Chargement du planning… »
+  // déjà présent dans <main>.
+  useEffect(() => {
+    if (!isFreshSession) return
+    const timer = setTimeout(() => setSplashCeilingHit(true), SPLASH_MAX_MS)
+    return () => clearTimeout(timer)
+  }, [isFreshSession])
+
+  const showSplash = isFreshSession && !splashCeilingHit && (status === 'loading' || !splashFloorDone)
 
   return (
     <div className="flex h-screen overflow-hidden">
