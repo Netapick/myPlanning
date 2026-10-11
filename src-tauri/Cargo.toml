@@ -1,6 +1,6 @@
 [package]
 name = "myplanning"
-version = "1.0.1"
+version = "1.0.2"
 description = "Application locale de gestion de planning"
 edition = "2021"
 
