@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { AboutTab } from './AboutTab'
 import { AppearanceTab } from './AppearanceTab'
 import { DataTab } from './DataTab'
 import { NotificationsTab } from './NotificationsTab'
 import { ShiftTemplatesTab } from './ShiftTemplatesTab'
 import { TeamsTab } from './TeamsTab'
 
-type TabKey = 'shifts' | 'teams' | 'notifications' | 'data' | 'appearance'
+type TabKey = 'shifts' | 'teams' | 'notifications' | 'data' | 'appearance' | 'about'
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'shifts', label: 'Tranches horaires' },
@@ -14,9 +15,10 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'notifications', label: 'Notifications' },
   { key: 'data', label: 'Données' },
   { key: 'appearance', label: 'Apparence' },
+  { key: 'about', label: 'À propos' },
 ]
 
-/** Écran Paramètres : cinq onglets, un composant dédié chacun. */
+/** Écran Paramètres : six onglets, un composant dédié chacun. */
 export function SettingsScreen() {
   const [tab, setTab] = useState<TabKey>('shifts')
 
@@ -46,6 +48,7 @@ export function SettingsScreen() {
       {tab === 'notifications' ? <NotificationsTab /> : null}
       {tab === 'data' ? <DataTab /> : null}
       {tab === 'appearance' ? <AppearanceTab /> : null}
+      {tab === 'about' ? <AboutTab /> : null}
     </div>
   )
 }

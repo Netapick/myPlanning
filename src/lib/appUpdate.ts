@@ -36,26 +36,50 @@ const parseVersion = (raw: string): number | null => {
   return Number(major) * 1_000_000 + Number(minor) * 1_000 + Number(patch)
 }
 
-export const checkForUpdate = async (currentVersion: string): Promise<AvailableUpdate | null> => {
+export type UpdateCheck =
+  | { status: 'available'; update: AvailableUpdate }
+  | { status: 'upToDate' }
+  /** Pas de réseau (la requête n'a pas pu partir). */
+  | { status: 'offline' }
+  /** Le serveur a répondu, mais pas avec quelque chose d'exploitable. */
+  | { status: 'error' }
+
+/** Même vérification que `checkForUpdate`, mais en distinguant « à jour »
+ *  d'« hors connexion » — pour le bouton manuel de Paramètres. */
+export const checkForUpdateDetailed = async (currentVersion: string): Promise<UpdateCheck> => {
+  let response: Response
   try {
-    const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+    response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json' },
     })
-    if (!response.ok) return null
+  } catch {
+    return { status: 'offline' }
+  }
+  if (!response.ok) return { status: 'error' }
 
+  try {
     const release = (await response.json()) as GitHubRelease
     const latest = parseVersion(release.tag_name)
     const current = parseVersion(currentVersion)
-    if (latest === null || current === null || latest <= current) return null
+    if (latest === null || current === null) return { status: 'error' }
+    if (latest <= current) return { status: 'upToDate' }
 
     const installer = release.assets.find((asset) => asset.name.endsWith('-setup.exe'))
     return {
-      version: release.tag_name.replace(/^v/, ''),
-      releaseUrl: release.html_url,
-      downloadUrl: installer?.browser_download_url ?? null,
-      releaseNotes: release.body?.trim() || null,
+      status: 'available',
+      update: {
+        version: release.tag_name.replace(/^v/, ''),
+        releaseUrl: release.html_url,
+        downloadUrl: installer?.browser_download_url ?? null,
+        releaseNotes: release.body?.trim() || null,
+      },
     }
   } catch {
-    return null
+    return { status: 'error' }
   }
+}
+
+export const checkForUpdate = async (currentVersion: string): Promise<AvailableUpdate | null> => {
+  const result = await checkForUpdateDetailed(currentVersion)
+  return result.status === 'available' ? result.update : null
 }

@@ -34,7 +34,7 @@ export function UpdateBanner({ update, onDismiss }: { update: AvailableUpdate; o
       const found = await check()
       if (!found) {
         setPhase('error')
-        setError('Mise à jour introuvable pour le moment — réessaie plus tard.')
+        setError('mise à jour introuvable pour le moment, réessayez plus tard.')
         return
       }
       setPhase('downloading')
@@ -49,8 +49,15 @@ export function UpdateBanner({ update, onDismiss }: { update: AvailableUpdate; o
       })
       await relaunch()
     } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : String(cause)
       setPhase('error')
-      setError(cause instanceof Error ? cause.message : String(cause))
+      setError(
+        // Le plugin remonte une erreur technique (« error sending request… »)
+        // quand le réseau est coupé : mieux vaut le dire en clair.
+        !navigator.onLine || /request|network|dns|connect|timed? ?out/i.test(detail)
+          ? 'pas de connexion internet. Vérifiez la connexion puis réessayez.'
+          : detail,
+      )
     }
   }
 
