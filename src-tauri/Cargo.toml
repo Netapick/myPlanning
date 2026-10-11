@@ -19,6 +19,7 @@ tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
+tauri-plugin-opener = "2.7.1"
 
 [profile.release]
 # Un outil perso, pas un produit distribué à grande échelle : on privilégie

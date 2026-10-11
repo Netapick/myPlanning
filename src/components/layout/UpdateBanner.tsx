@@ -1,5 +1,6 @@
 import { IconButton } from '@/components/ui/Button'
 import { IconClose, IconDownload } from '@/components/ui/icons'
+import { isTauri } from '@/lib/api'
 import type { AvailableUpdate } from '@/lib/appUpdate'
 
 /**
@@ -9,8 +10,16 @@ import type { AvailableUpdate } from '@/lib/appUpdate'
  * changé, mais reste masquable pour la session en cours.
  */
 export function UpdateBanner({ update, onDismiss }: { update: AvailableUpdate; onDismiss: () => void }) {
-  const openDownload = () => {
-    window.open(update.downloadUrl ?? update.releaseUrl, '_blank', 'noopener')
+  // `window.open` ne fait rien dans la fenêtre Tauri : le lien doit passer par
+  // le plugin d'ouverture, qui le confie au navigateur par défaut du système.
+  const openDownload = async () => {
+    const url = update.downloadUrl ?? update.releaseUrl
+    if (isTauri()) {
+      const { openUrl } = await import('@tauri-apps/plugin-opener')
+      await openUrl(url)
+    } else {
+      window.open(url, '_blank', 'noopener')
+    }
   }
 
   return (
@@ -21,7 +30,7 @@ export function UpdateBanner({ update, onDismiss }: { update: AvailableUpdate; o
       </p>
       <button
         type="button"
-        onClick={openDownload}
+        onClick={() => void openDownload()}
         className="h-8 shrink-0 rounded-control bg-accent px-3 text-body-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-strong"
       >
         Télécharger
