@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { colorVar, PALETTE_LABELS, PALETTE_SIZE } from '@/lib/palette'
+import { titleCase } from '@/lib/text'
 import type { Team } from '@/lib/types'
 import { newId } from '@/store/data'
 
@@ -31,7 +32,7 @@ export function TeamForm({ open, team, defaultColor, onSave, onClose }: TeamForm
       setError('Nom obligatoire.')
       return
     }
-    onSave({ id: team?.id ?? newId(), name: name.trim(), colorIndex })
+    onSave({ id: team?.id ?? newId(), name: titleCase(name.trim()), colorIndex })
     onClose()
   }
 
@@ -56,6 +57,7 @@ export function TeamForm({ open, team, defaultColor, onSave, onClose }: TeamForm
           value={name}
           error={error}
           onChange={(event) => setName(event.target.value)}
+          onBlur={() => setName(titleCase(name))}
         />
         <div>
           <p className="mb-1.5 text-label tracking-wide text-muted uppercase">Couleur</p>

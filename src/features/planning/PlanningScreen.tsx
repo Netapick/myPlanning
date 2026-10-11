@@ -479,7 +479,7 @@ function EmployeeRow({
             `sticky` forme son propre contexte d'empilement, donc un simple
             z-index sur le panneau ne suffit pas à passer devant la ligne
             suivante — il faut faire remonter toute la ligne survolée. */}
-        <div className="relative min-w-0">
+        <div className="min-w-0">
           <p className="truncate text-body-sm font-medium text-ink">{fullName(employee)}</p>
           <p className="tabular text-body-sm text-faint">
             {formatDuration(weeklyMinutes)}/{formatDuration(employee.contract.weeklyHours * 60)}
@@ -496,7 +496,7 @@ function EmployeeRow({
               (la ligne sticky) même une fois positionné hors de sa boîte,
               donc y déplacer le curseur ne le referme pas. */}
           <div
-            className={`no-print absolute left-0 z-20 w-56 rounded-panel border border-hairline bg-surface-1 p-3 opacity-0 shadow-overlay transition-opacity group-hover:opacity-100 ${
+            className={`no-print pointer-events-none absolute inset-x-0 z-20 rounded-panel border border-hairline bg-surface-1 p-2.5 opacity-0 shadow-overlay transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 ${
               isLastRow ? 'bottom-full mb-1' : 'top-full mt-1'
             }`}
           >

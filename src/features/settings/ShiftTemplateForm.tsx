@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { TextField, TimeField } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { colorVar, PALETTE_LABELS, PALETTE_SIZE } from '@/lib/palette'
+import { titleCase } from '@/lib/text'
 import { isValidTime } from '@/lib/time'
 import type { ShiftTemplate } from '@/lib/types'
 import { newId } from '@/store/data'
@@ -65,7 +66,7 @@ export function ShiftTemplateForm({
 
     onSave({
       id: template?.id ?? newId(),
-      name: form.name.trim(),
+      name: titleCase(form.name.trim()),
       start: form.start,
       end: form.end,
       colorIndex: form.colorIndex,
@@ -97,6 +98,7 @@ export function ShiftTemplateForm({
           value={form.name}
           error={errors.name}
           onChange={(event) => set('name', event.target.value)}
+          onBlur={() => set('name', titleCase(form.name))}
         />
         <div className="grid grid-cols-2 gap-4">
           <TimeField

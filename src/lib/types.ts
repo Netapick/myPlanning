@@ -53,6 +53,8 @@ export interface Employee {
   /** Service de rattachement, ex. « Opérations ». */
   department: string
   teamId: Id | null
+  /** Index 1-8 dans la palette (voir lib/palette.ts). Absent = teinte dérivée de l'identifiant. */
+  colorIndex?: number
   contract: Contract
   status: EmployeeStatus
   /** Sorti des effectifs : masqué partout, mais ses créneaux passés restent. */

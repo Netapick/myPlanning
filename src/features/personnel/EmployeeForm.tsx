@@ -4,6 +4,8 @@ import { SelectField, TextField } from '@/components/ui/Field'
 import { Modal } from '@/components/ui/Modal'
 import { EmployeeCharts } from './EmployeeCharts'
 import { employeeBalances } from '@/lib/balances'
+import { colorVar, nextColorIndex, PALETTE_LABELS, PALETTE_SIZE } from '@/lib/palette'
+import { titleCase } from '@/lib/text'
 import { formatDuration, formatSignedDuration } from '@/lib/time'
 import {
   CONTRACT_TYPES,
@@ -23,6 +25,7 @@ interface FormState {
   role: string
   department: string
   teamId: string
+  colorIndex: number
   contractType: ContractType
   weeklyHours: string
   startDate: string
@@ -34,13 +37,14 @@ interface FormState {
   overtimeHours: string
 }
 
-const emptyForm = (): FormState => ({
+const emptyForm = (defaultColor: number): FormState => ({
   firstName: '',
   lastName: '',
   email: '',
   role: '',
   department: '',
   teamId: '',
+  colorIndex: defaultColor,
   contractType: 'CDI',
   weeklyHours: '35',
   startDate: toIso(new Date()),
@@ -50,13 +54,14 @@ const emptyForm = (): FormState => ({
   overtimeHours: '0',
 })
 
-const toForm = (employee: Employee): FormState => ({
+const toForm = (employee: Employee, defaultColor: number): FormState => ({
   firstName: employee.firstName,
   lastName: employee.lastName,
   email: employee.email ?? '',
   role: employee.role,
   department: employee.department,
   teamId: employee.teamId ?? '',
+  colorIndex: employee.colorIndex ?? defaultColor,
   contractType: employee.contract.type,
   weeklyHours: String(employee.contract.weeklyHours),
   startDate: employee.contract.startDate,
@@ -102,6 +107,8 @@ interface EmployeeFormProps {
   /** `null` = création. */
   employee: Employee | null
   teams: Team[]
+  /** Teintes déjà prises — sert à proposer une couleur libre à la création. */
+  usedColors: number[]
   /** Tous les événements de la personne — soldes calculés et liste affichée en mode édition. */
   events: Event[]
   /** Tous les créneaux de la personne — graphiques du mode « Affichage avancé ». */
@@ -110,8 +117,8 @@ interface EmployeeFormProps {
   onClose: () => void
 }
 
-export function EmployeeForm({ open, employee, teams, events, shifts, onSave, onClose }: EmployeeFormProps) {
-  const [form, setForm] = useState<FormState>(emptyForm)
+export function EmployeeForm({ open, employee, teams, usedColors, events, shifts, onSave, onClose }: EmployeeFormProps) {
+  const [form, setForm] = useState<FormState>(() => emptyForm(1))
   const [errors, setErrors] = useState<Errors>({})
   const [advanced, setAdvanced] = useState(false)
 
@@ -119,9 +126,13 @@ export function EmployeeForm({ open, employee, teams, events, shifts, onSave, on
   // avoir édité quelqu'un ne doit pas ressortir ses valeurs.
   useEffect(() => {
     if (!open) return
-    setForm(employee ? toForm(employee) : emptyForm())
+    const defaultColor = nextColorIndex(usedColors)
+    setForm(employee ? toForm(employee, defaultColor) : emptyForm(defaultColor))
     setErrors({})
     setAdvanced(false)
+    // `usedColors` volontairement hors des dépendances : la couleur par défaut
+    // est figée à l'ouverture, elle ne doit pas bouger pendant la saisie.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, employee])
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -151,12 +162,13 @@ export function EmployeeForm({ open, employee, teams, events, shifts, onSave, on
 
     onSave({
       id: employee?.id ?? newId(),
-      firstName: form.firstName.trim(),
-      lastName: form.lastName.trim(),
+      firstName: titleCase(form.firstName.trim()),
+      lastName: titleCase(form.lastName.trim()),
       ...(form.email.trim() ? { email: form.email.trim() } : {}),
       role: form.role.trim(),
       department: form.department.trim(),
       teamId: form.teamId || null,
+      colorIndex: form.colorIndex,
       contract: {
         type: form.contractType,
         weeklyHours: Number(form.weeklyHours.replace(',', '.')),
@@ -205,12 +217,14 @@ export function EmployeeForm({ open, employee, teams, events, shifts, onSave, on
           value={form.firstName}
           error={errors.firstName}
           onChange={(event) => set('firstName', event.target.value)}
+          onBlur={() => set('firstName', titleCase(form.firstName))}
         />
         <TextField
           label="Nom"
           value={form.lastName}
           error={errors.lastName}
           onChange={(event) => set('lastName', event.target.value)}
+          onBlur={() => set('lastName', titleCase(form.lastName))}
         />
         <TextField
           label="Poste"
@@ -242,6 +256,25 @@ export function EmployeeForm({ open, employee, teams, events, shifts, onSave, on
             </option>
           ))}
         </SelectField>
+
+        <div className="sm:col-span-2">
+          <p className="mb-1.5 text-label tracking-wide text-muted uppercase">Couleur</p>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: PALETTE_SIZE }, (_, i) => i + 1).map((index) => (
+              <button
+                key={index}
+                type="button"
+                aria-label={PALETTE_LABELS[index - 1]}
+                aria-pressed={form.colorIndex === index}
+                onClick={() => set('colorIndex', index)}
+                className={`h-8 w-8 rounded-full transition-shadow ${
+                  form.colorIndex === index ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface-1' : ''
+                }`}
+                style={{ backgroundColor: colorVar(index) }}
+              />
+            ))}
+          </div>
+        </div>
 
         <SelectField
           label="Type de contrat"

@@ -125,6 +125,7 @@ export function AppShell() {
             : null
         }
         teams={teams}
+        usedColors={employees.flatMap((employee) => (employee.colorIndex ? [employee.colorIndex] : []))}
         events={events}
         shifts={shifts}
         onClose={closeEmployeeProfile}

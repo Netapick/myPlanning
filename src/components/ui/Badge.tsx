@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { colorVar } from '@/lib/palette'
+import { colorVar, normalizeColorIndex } from '@/lib/palette'
 import type { Employee, EmployeeStatus } from '@/lib/types'
 import { initials } from '@/lib/types'
 
@@ -57,7 +57,10 @@ export function StatusBadge({ status }: { status: EmployeeStatus }) {
  * distinguer les lignes du tableau.
  */
 export function Avatar({ employee, size = 40 }: { employee: Employee; size?: number }) {
-  const index = (employee.id.charCodeAt(0) + employee.id.charCodeAt(employee.id.length - 1)) % 8
+  const index =
+    employee.colorIndex !== undefined
+      ? normalizeColorIndex(employee.colorIndex) - 1
+      : (employee.id.charCodeAt(0) + employee.id.charCodeAt(employee.id.length - 1)) % 8
   return (
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
