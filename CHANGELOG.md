@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7 — 11 octobre 2026
+
+### Nouveautés
+- **Paramètres > À propos** : affiche la version installée et permet de vérifier manuellement les mises à jour. Le résultat est explicite : à jour, nouvelle version disponible (avec le bouton « Mettre à jour »), pas de connexion internet, ou vérification impossible.
+
+### Corrections
+- **Mise à jour sans réseau** : le bouton « Mettre à jour » affiche désormais un message clair (« pas de connexion internet ») au lieu d'une erreur technique.
+
 ## 1.0.6 — 11 octobre 2026
 
 ### Nouveautés
