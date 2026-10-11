@@ -203,6 +203,13 @@ pub fn export_document(doc: &Value, path: &Path) -> Result<(), String> {
     fs::write(path, format!("{pretty}\n")).map_err(|error| format!("Écriture impossible : {error}"))
 }
 
+/// Écrit un texte brut (ex. un CSV) à l'emplacement choisi dans la boîte de
+/// dialogue « Enregistrer sous » — même principe que `export_document`, sans
+/// validation de forme puisque ce n'est pas un document de planning.
+pub fn export_text(content: &str, path: &Path) -> Result<(), String> {
+    fs::write(path, content).map_err(|error| format!("Écriture impossible : {error}"))
+}
+
 /// Date de dernière écriture du fichier, pour l'indicateur de sauvegarde —
 /// même rôle que `lastSavedAt` côté JS.
 pub fn last_saved_at(app: &AppHandle) -> Option<String> {

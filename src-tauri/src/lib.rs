@@ -13,6 +13,7 @@ pub fn run() {
             commands::save_document,
             commands::reset_document,
             commands::export_document,
+            commands::export_text,
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de myPlanning");

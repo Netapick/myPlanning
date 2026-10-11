@@ -7,7 +7,6 @@ import { type AvailableUpdate, checkForUpdate } from '@/lib/appUpdate'
 import { isTauri } from '@/lib/api'
 import { EMPTY_EMPLOYEES, EMPTY_EVENTS, EMPTY_SHIFTS, EMPTY_TEAMS, useDataStore } from '@/store/data'
 import { useUiStore } from '@/store/ui'
-import { DevBanner } from './DevBanner'
 import { SideNav } from './SideNav'
 import { SPLASH_MAX_MS, SPLASH_MIN_MS, SplashScreen } from './SplashScreen'
 import { TopBar } from './TopBar'
@@ -91,7 +90,6 @@ export function AppShell() {
       <SideNav />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
-        <DevBanner />
         {availableUpdate ? (
           <UpdateBanner update={availableUpdate} onDismiss={() => setAvailableUpdate(null)} />
         ) : null}

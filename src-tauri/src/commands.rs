@@ -67,3 +67,11 @@ pub fn reset_document(app: AppHandle) -> Result<LoadResult, String> {
 pub fn export_document(document: Value, path: String) -> Result<(), String> {
     store::export_document(&document, Path::new(&path))
 }
+
+/// Enregistre un texte brut (export CSV du planning) à l'emplacement choisi
+/// dans la boîte de dialogue « Enregistrer sous » — un téléchargement par lien
+/// ne fait rien dans la fenêtre Tauri.
+#[tauri::command]
+pub fn export_text(content: String, path: String) -> Result<(), String> {
+    store::export_text(&content, Path::new(&path))
+}

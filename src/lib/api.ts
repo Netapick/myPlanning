@@ -106,6 +106,19 @@ const exportDocumentTauri = async (document: PlanningData, name: string): Promis
   return { status: 'saved', path }
 }
 
+const exportTextTauri = async (
+  content: string,
+  name: string,
+  filter: { name: string; extension: string },
+): Promise<ExportOutcome> => {
+  const { invoke } = await import('@tauri-apps/api/core')
+  const { save } = await import('@tauri-apps/plugin-dialog')
+  const path = await save({ defaultPath: name, filters: [{ name: filter.name, extensions: [filter.extension] }] })
+  if (!path) return { status: 'cancelled' }
+  await invoke('export_text', { content, path })
+  return { status: 'saved', path }
+}
+
 // --- Mode navigateur : téléchargement blob ----------------------------------
 // Un vrai navigateur ne dit jamais à la page où il a enregistré le fichier —
 // seul le mode desktop (boîte de dialogue Tauri ci-dessus) connaît le chemin.
@@ -131,6 +144,24 @@ export const saveDocument = (document: PlanningData): Promise<SaveResult> =>
 
 export const resetDocument = (): Promise<LoadResult> =>
   isTauri() ? resetDocumentTauri() : resetDocumentHttp()
+
+const exportTextWeb = (content: string, name: string, mime: string): ExportOutcome => {
+  const url = URL.createObjectURL(new Blob([content], { type: mime }))
+  const link = window.document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  URL.revokeObjectURL(url)
+  return { status: 'downloaded' }
+}
+
+/** Enregistre un texte (CSV…) : boîte « Enregistrer sous » en desktop, téléchargement en navigateur. */
+export const exportText = (
+  content: string,
+  name: string,
+  filter: { name: string; extension: string; mime: string },
+): Promise<ExportOutcome> =>
+  isTauri() ? exportTextTauri(content, name, filter) : Promise.resolve(exportTextWeb(content, name, filter.mime))
 
 export const exportDocument = (document: PlanningData, name: string): Promise<ExportOutcome> =>
   isTauri() ? exportDocumentTauri(document, name) : Promise.resolve(exportDocumentWeb(document, name))

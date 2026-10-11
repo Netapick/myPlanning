@@ -12,7 +12,7 @@ import {
   IconPrinter,
 } from '@/components/ui/icons'
 import { employeeBalances, type EmployeeBalances } from '@/lib/balances'
-import { downloadCsv } from '@/lib/csv'
+import { saveCsv } from '@/lib/csv'
 import { dateRangesOverlap } from '@/lib/events'
 import { publicHolidayName } from '@/lib/holidays'
 import { colorVar } from '@/lib/palette'
@@ -83,6 +83,7 @@ export function PlanningScreen() {
   const [entryEvent, setEntryEvent] = useState<Event | null>(null)
   const [dragging, setDragging] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DraftTarget | null>(null)
+  const [exportNotice, setExportNotice] = useState<{ ok: boolean; text: string } | null>(null)
 
   const days = useMemo(() => weekDays(reference), [reference])
   const isoDays = useMemo(() => days.map(toIso), [days])
@@ -215,7 +216,7 @@ export function PlanningScreen() {
     setDropTarget(null)
   }
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const rows: string[][] = [['Employé', 'Date', 'Type', 'Horaire / Note']]
     for (const employee of visibleEmployees) {
       for (const date of isoDays) {
@@ -238,7 +239,15 @@ export function PlanningScreen() {
         ])
       }
     }
-    downloadCsv(`planning-${isoDays[0]}-au-${isoDays[isoDays.length - 1]}.csv`, rows)
+    const name = `planning-${isoDays[0]}-au-${isoDays[isoDays.length - 1]}.csv`
+    setExportNotice(null)
+    try {
+      const outcome = await saveCsv(name, rows)
+      if (outcome.status === 'saved') setExportNotice({ ok: true, text: `« ${name} » enregistré dans ${outcome.path}` })
+      else if (outcome.status === 'downloaded') setExportNotice({ ok: true, text: `« ${name} » téléchargé.` })
+    } catch (error) {
+      setExportNotice({ ok: false, text: error instanceof Error ? error.message : 'Export impossible.' })
+    }
   }
 
   return (
@@ -268,7 +277,7 @@ export function PlanningScreen() {
               }}
               className="h-9 rounded-control border border-hairline bg-surface-1 px-2.5 text-body-sm text-ink field-focus"
             />
-            <IconButton label="Exporter la semaine en CSV" onClick={exportCsv}>
+            <IconButton label="Exporter la semaine en CSV" onClick={() => void exportCsv()}>
               <IconDownload size={18} />
             </IconButton>
             <IconButton label="Imprimer la semaine" onClick={() => window.print()}>
@@ -277,6 +286,15 @@ export function PlanningScreen() {
           </div>
         }
       />
+
+      {exportNotice ? (
+        <p
+          role="status"
+          className={`mb-3 text-body-sm break-all ${exportNotice.ok ? 'text-good-text' : 'text-critical-text'}`}
+        >
+          {exportNotice.text}
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap gap-2">
         <FilterChip active={teamFilter === 'all'} onClick={() => setTeamFilter('all')}>
