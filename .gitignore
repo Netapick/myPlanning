@@ -42,3 +42,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Clés privées (signature des mises à jour) — ne JAMAIS commiter
+.secrets/
+*.key

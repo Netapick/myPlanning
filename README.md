@@ -117,7 +117,8 @@ En mode navigateur, il n'y a pas de mise à jour (pas de version installée).
 Un tag contenant `-demo` est publié en pré-release : il n'est jamais proposé comme mise à jour.
 
 La signature des mises à jour utilise une clé privée Tauri, stockée dans le secret GitHub
-`TAURI_SIGNING_PRIVATE_KEY` (copie locale hors dépôt dans `~/.tauri/`). La clé publique est dans
+`TAURI_SIGNING_PRIVATE_KEY` (copies locales : `~/.tauri/` et `.secrets/`, ce dernier dossier est ignoré par Git — **ne jamais
+commiter cette clé**, le dépôt est public). La clé publique est dans
 `tauri.conf.json`. **Perdre la clé privée empêche de publier des mises à jour pour les
 installations existantes.** La signature de l'installateur Windows utilise, elle, les secrets
 `WINDOWS_CERTIFICATE` et `WINDOWS_CERTIFICATE_PASSWORD`.
