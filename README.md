@@ -106,16 +106,6 @@ progression), vérifie sa signature, l'installe puis redémarre toute seule. Auc
 envoyée ; hors connexion, la vérification échoue silencieusement et l'app fonctionne normalement.
 En mode navigateur, il n'y a pas de mise à jour (pas de version installée).
 
-### Publier une version
-
-1. Passer le numéro de version à `X.Y.Z` dans `package.json`, `package-lock.json`,
-   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `src-tauri/Cargo.lock`.
-2. Mettre à jour [`CHANGELOG.md`](CHANGELOG.md), commiter, puis `git tag vX.Y.Z` et pousser le tag.
-3. Le workflow `.github/workflows/release.yml` construit, signe et publie la release, avec les
-   installateurs, leurs signatures `.sig` et le fichier `latest.json` que l'app interroge.
-
-Un tag contenant `-demo` est publié en pré-release : il n'est jamais proposé comme mise à jour.
-
 ## Sauvegarder ou déplacer les données
 
 Paramètres > Données propose, dans les deux modes :
