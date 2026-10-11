@@ -1,4 +1,4 @@
-import { IconLayers } from '@/components/ui/icons'
+import { IconCalendar } from '@/components/ui/icons'
 
 /**
  * Durée plancher du splash (voir `AppShell.tsx`) — évite un flash disgracieux
@@ -21,7 +21,7 @@ export function SplashScreen() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-surface-0">
       <span className="flex h-16 w-16 animate-[splash-in_500ms_ease-out] items-center justify-center rounded-panel bg-accent text-accent-contrast shadow-overlay">
-        <IconLayers size={32} />
+        <IconCalendar size={32} />
       </span>
       <p className="animate-[splash-in_500ms_ease-out] text-headline-md font-bold text-accent">myPlanning</p>
       <span className="h-1 w-40 overflow-hidden rounded-full bg-surface-2">

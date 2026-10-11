@@ -3,19 +3,17 @@
     Icône de l'application desktop myPlanning.
 
     Fond bleu accent (#0052CC, la même valeur que le jeton d'accent en thème
-    clair) avec le pictogramme "layers" de Lucide (https://lucide.dev) centré
-    et à l'échelle
-    — tracés copiés tels quels depuis
-    node_modules/lucide-react/dist/esm/icons/layers.mjs (viewBox 24×24,
-    trait 2, coins arrondis), mis à l'échelle ~30x et recentrés. Trois plans
-    empilés — évoque des créneaux superposés plutôt qu'un calendrier
-    générique. Uniquement Lucide comme source d'icônes dans ce projet,
-    interface comme icône d'app.
+    clair) avec le pictogramme "calendar" de Lucide (https://lucide.dev),
+    tracés copiés tels quels depuis
+    node_modules/lucide-react/dist/esm/icons/calendar.mjs (viewBox 24×24),
+    mis à l'échelle ~30x et recentrés. Uniquement Lucide comme source
+    d'icônes dans ce projet, interface comme icône d'app.
   -->
   <rect width="1024" height="1024" rx="220" fill="#0052CC" />
   <g transform="translate(152, 152) scale(30)" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
-    <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
-    <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
+    <path d="M8 2v3" />
+    <path d="M16 2v3" />
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
   </g>
 </svg>
